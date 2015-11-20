@@ -22,6 +22,11 @@ class CSqlScore: public IScore
 	sql::Statement *m_pStatement;
 	sql::ResultSet *m_pResults;
 
+	sql::Driver *m_pMasterDriver;
+	sql::Connection *m_pMasterConnection;
+	sql::Statement *m_pMasterStatement;
+	sql::ResultSet *m_pMasterResults;
+
 	// copy of config vars
 	const char* m_pDatabase;
 	const char* m_pPrefix;
@@ -73,8 +78,9 @@ class CSqlScore: public IScore
 
 	void Init();
 
-	bool Connect(bool Master = false);
-	void Disconnect();
+	bool Connect();
+	bool ConnectMaster();
+	void Disconnect(bool Master = false);
 
 	void FuzzyString(char *pString);
 	// anti SQL injection

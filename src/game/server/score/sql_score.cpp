@@ -57,14 +57,14 @@ CSqlScore::~CSqlScore()
 	}
 }
 
-bool CSqlScore::Connect(bool Master)
+bool CSqlScore::Connect()
 {
 	if (m_pDriver != NULL && m_pConnection != NULL)
 	{
 		try
 		{
 			// Connect to specific database
-			m_pConnection->setSchema(GetDatabase(Master));
+			m_pConnection->setSchema(GetDatabase());
 		}
 		catch (sql::SQLException &e)
 		{
@@ -87,10 +87,10 @@ bool CSqlScore::Connect(bool Master)
 		m_pStatement = 0;
 
 		sql::ConnectOptionsMap connection_properties;
-		connection_properties["hostName"]      = sql::SQLString(GetIp(Master));
-		connection_properties["port"]          = GetPort(Master);
-		connection_properties["userName"]      = sql::SQLString(GetUser(Master));
-		connection_properties["password"]      = sql::SQLString(GetPass(Master));
+		connection_properties["hostName"]      = sql::SQLString(GetIp());
+		connection_properties["port"]          = GetPort();
+		connection_properties["userName"]      = sql::SQLString(GetUser());
+		connection_properties["password"]      = sql::SQLString(GetPass());
 		connection_properties["OPT_RECONNECT"] = true;
 
 		// Create connection
@@ -101,14 +101,14 @@ bool CSqlScore::Connect(bool Master)
 		m_pStatement = m_pConnection->createStatement();
 
 		// Create database if not exists but not on master
-		if(g_Config.m_SvSqlCreateTables && !Master)
+		if(g_Config.m_SvSqlCreateTables)
 		{
 			str_format(aBuf, sizeof(aBuf), "CREATE DATABASE IF NOT EXISTS %s", GetDatabase());
 			m_pStatement->execute(aBuf);
 		}
 
 		// Connect to specific database
-		m_pConnection->setSchema(GetDatabase(Master));
+		m_pConnection->setSchema(GetDatabase());
 		dbg_msg("SQL", "SQL connection established");
 		return true;
 	}
@@ -160,7 +160,103 @@ bool CSqlScore::Connect(bool Master)
 	return false;
 }
 
-void CSqlScore::Disconnect()
+bool CSqlScore::ConnectMaster()
+{
+	if (m_pMasterDriver != NULL && m_pMasterConnection != NULL)
+	{
+		try
+		{
+			// Connect to specific database
+			m_pMasterConnection->setSchema(GetDatabase(true));
+		}
+		catch (sql::SQLException &e)
+		{
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "MySQL Error: %s", e.what());
+			dbg_msg("SQL", aBuf);
+
+			dbg_msg("SQL", "ERROR: SQL connection failed");
+			return false;
+		}
+		return true;
+	}
+
+	try
+	{
+		char aBuf[256];
+
+		m_pMasterDriver = 0;
+		m_pMasterConnection = 0;
+		m_pMasterStatement = 0;
+
+		sql::ConnectOptionsMap connection_properties;
+		connection_properties["hostName"]      = sql::SQLString(GetIp(true));
+		connection_properties["port"]          = GetPort(true);
+		connection_properties["userName"]      = sql::SQLString(GetUser(true));
+		connection_properties["password"]      = sql::SQLString(GetPass(true));
+		connection_properties["OPT_RECONNECT"] = true;
+
+		// Create connection
+		m_pMasterDriver = get_driver_instance();
+		m_pMasterConnection = m_pMasterDriver->connect(connection_properties);
+
+		// Create Statement
+		m_pMasterStatement = m_pMasterConnection->createStatement();
+
+		// Connect to specific database
+		m_pMasterConnection->setSchema(GetDatabase(true));
+		dbg_msg("SQL", "SQL connection established");
+		return true;
+	}
+	catch (sql::SQLException &e)
+	{
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "MySQL Error: %s", e.what());
+		dbg_msg("SQL", aBuf);
+
+		dbg_msg("SQL", "ERROR: SQL connection failed");
+		return false;
+	}
+	catch (const std::exception& ex)
+	{
+		// ...
+		dbg_msg("SQL", "1 %s",ex.what());
+
+	}
+	catch (const std::string& ex)
+	{
+		// ...
+		dbg_msg("SQL", "2 %s",ex.c_str());
+	}
+	catch( int )
+	{
+		dbg_msg("SQL", "3 %s");
+	}
+	catch( float )
+	{
+		dbg_msg("SQL", "4 %s");
+	}
+
+	catch( char[] )
+	{
+		dbg_msg("SQL", "5 %s");
+	}
+
+	catch( char )
+	{
+		dbg_msg("SQL", "6 %s");
+	}
+	catch (...)
+	{
+		dbg_msg("SQL", "Unknown Error cause by the MySQL/C++ Connector, my advice compile server_debug and use it");
+
+		dbg_msg("SQL", "ERROR: SQL connection failed");
+		return false;
+	}
+	return false;
+}
+
+void CSqlScore::Disconnect(bool Master)
 {
 }
 
@@ -299,11 +395,16 @@ void CSqlScore::SaveTeamScoreThread(void *pUser)
 
 	CSqlTeamScoreData *pData = (CSqlTeamScoreData *)pUser;
 
+	bool Master = g_Config.m_SvUseSQLMaster;
+
 	// Connect to database
-	if(pData->m_pSqlData->Connect(g_Config.m_SvUseSQLMaster))
+	if(Master ? pData->m_pSqlData->ConnectMaster() : pData->m_pSqlData->Connect())
 	{
 		try
 		{
+			sql::Statement *pStatement = Master ? pData->m_pSqlData->m_pMasterStatement : pData->m_pSqlData->m_pStatement;
+			sql::ResultSet* &pResults = Master ? pData->m_pSqlData->m_pMasterResults : pData->m_pSqlData->m_pResults;
+
 			char aBuf[2300];
 			char aUpdateID[17];
 			aUpdateID[0] = 0;
@@ -314,9 +415,9 @@ void CSqlScore::SaveTeamScoreThread(void *pUser)
 			}
 
 			str_format(aBuf, sizeof(aBuf), "SELECT Name, l.ID, Time FROM ((SELECT ID FROM %s_teamrace WHERE Map = '%s' AND Name = '%s') as l) LEFT JOIN %s_teamrace as r ON l.ID = r.ID ORDER BY ID;", pData->m_pSqlData->GetPrefix(g_Config.m_SvUseSQLMaster), pData->m_pSqlData->m_aMap, pData->m_aNames[0], pData->m_pSqlData->GetPrefix(g_Config.m_SvUseSQLMaster));
-			pData->m_pSqlData->m_pResults = pData->m_pSqlData->m_pStatement->executeQuery(aBuf);
+			pResults = pStatement->executeQuery(aBuf);
 
-			if (pData->m_pSqlData->m_pResults->rowsCount() > 0)
+			if (pResults->rowsCount() > 0)
 			{
 				char aID[17];
 				char aID2[17];
@@ -324,14 +425,14 @@ void CSqlScore::SaveTeamScoreThread(void *pUser)
 				unsigned int Count = 0;
 				bool ValidNames = true;
 
-				pData->m_pSqlData->m_pResults->first();
-				float Time = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
-				strcpy(aID, pData->m_pSqlData->m_pResults->getString("ID").c_str());
+				pResults->first();
+				float Time = (float)pResults->getDouble("Time");
+				strcpy(aID, pResults->getString("ID").c_str());
 
 				do
 				{
-					strcpy(aID2, pData->m_pSqlData->m_pResults->getString("ID").c_str());
-					strcpy(aName, pData->m_pSqlData->m_pResults->getString("Name").c_str());
+					strcpy(aID2, pResults->getString("ID").c_str());
+					strcpy(aName, pResults->getString("Name").c_str());
 					pData->m_pSqlData->ClearString(aName);
 					if (str_comp(aID, aID2) != 0)
 					{
@@ -344,7 +445,7 @@ void CSqlScore::SaveTeamScoreThread(void *pUser)
 							break;
 						}
 
-						Time = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
+						Time = (float)pResults->getDouble("Time");
 						ValidNames = true;
 						Count = 0;
 						strcpy(aID, aID2);
@@ -364,7 +465,7 @@ void CSqlScore::SaveTeamScoreThread(void *pUser)
 							break;
 						}
 					}
-				} while (pData->m_pSqlData->m_pResults->next());
+				} while (pResults->next());
 
 				if (ValidNames && Count == pData->m_Size)
 				{
@@ -379,18 +480,18 @@ void CSqlScore::SaveTeamScoreThread(void *pUser)
 			{
 				str_format(aBuf, sizeof(aBuf), "UPDATE %s_teamrace SET Time='%.2f' WHERE ID = '%s';", pData->m_pSqlData->GetPrefix(g_Config.m_SvUseSQLMaster), pData->m_Time, aUpdateID);
 				dbg_msg("SQL", aBuf);
-				pData->m_pSqlData->m_pStatement->execute(aBuf);
+				pStatement->execute(aBuf);
 			}
 			else
 			{
-				pData->m_pSqlData->m_pStatement->execute("SET @id = UUID();");
+				pStatement->execute("SET @id = UUID();");
 
 				for(unsigned int i = 0; i < pData->m_Size; i++)
 				{
 				// if no entry found... create a new one
 					str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_teamrace(Map, Name, Timestamp, Time, ID) VALUES ('%s', '%s', CURRENT_TIMESTAMP(), '%.2f', @id);", pData->m_pSqlData->GetPrefix(g_Config.m_SvUseSQLMaster), pData->m_pSqlData->m_aMap, pData->m_aNames[i], pData->m_Time);
 					dbg_msg("SQL", aBuf);
-					pData->m_pSqlData->m_pStatement->execute(aBuf);
+					pStatement->execute(aBuf);
 				}
 			}
 
@@ -398,7 +499,7 @@ void CSqlScore::SaveTeamScoreThread(void *pUser)
 			dbg_msg("SQL", "Updating team time done");
 
 			// delete results statement
-			delete pData->m_pSqlData->m_pResults;
+			delete pResults;
 		}
 		catch (sql::SQLException &e)
 		{
@@ -409,7 +510,7 @@ void CSqlScore::SaveTeamScoreThread(void *pUser)
 		}
 
 		// disconnect from database
-		pData->m_pSqlData->Disconnect();
+		pData->m_pSqlData->Disconnect(Master);
 	}
 
 	delete pData;
@@ -624,46 +725,51 @@ void CSqlScore::SaveScoreThread(void *pUser)
 
 	CSqlScoreData *pData = (CSqlScoreData *)pUser;
 
+	bool Master = g_Config.m_SvUseSQLMaster;
+
 	// Connect to database
-	if(pData->m_pSqlData->Connect(g_Config.m_SvUseSQLMaster))
+	if(Master ? pData->m_pSqlData->ConnectMaster() : pData->m_pSqlData->Connect())
 	{
 		try
 		{
+			sql::Statement *pStatement = Master ? pData->m_pSqlData->m_pMasterStatement : pData->m_pSqlData->m_pStatement;
+			sql::ResultSet* &pResults = Master ? pData->m_pSqlData->m_pMasterResults : pData->m_pSqlData->m_pResults;
+
 			char aBuf[768];
 
 			// check strings
 			pData->m_pSqlData->ClearString(pData->m_aName);
 
-			str_format(aBuf, sizeof(aBuf), "SELECT * FROM %s_race WHERE Map='%s' AND Name='%s' ORDER BY time ASC LIMIT 1;", pData->m_pSqlData->GetPrefix(g_Config.m_SvUseSQLMaster), pData->m_pSqlData->m_aMap, pData->m_aName);
-			pData->m_pSqlData->m_pResults = pData->m_pSqlData->m_pStatement->executeQuery(aBuf);
-			if(!pData->m_pSqlData->m_pResults->next())
+			str_format(aBuf, sizeof(aBuf), "SELECT * FROM %s_race WHERE Map='%s' AND Name='%s' ORDER BY time ASC LIMIT 1;", pData->m_pSqlData->GetPrefix(Master), pData->m_pSqlData->m_aMap, pData->m_aName);
+			pResults = pStatement->executeQuery(aBuf);
+			if(!pResults->next())
 			{
-				delete pData->m_pSqlData->m_pResults;
+				delete pResults;
 
-				str_format(aBuf, sizeof(aBuf), "SELECT Points FROM %s_maps WHERE Map ='%s'", pData->m_pSqlData->GetPrefix(g_Config.m_SvUseSQLMaster), pData->m_pSqlData->m_aMap);
-				pData->m_pSqlData->m_pResults = pData->m_pSqlData->m_pStatement->executeQuery(aBuf);
+				str_format(aBuf, sizeof(aBuf), "SELECT Points FROM %s_maps WHERE Map ='%s'", pData->m_pSqlData->GetPrefix(Master), pData->m_pSqlData->m_aMap);
+				pResults = pStatement->executeQuery(aBuf);
 
-				if(pData->m_pSqlData->m_pResults->rowsCount() == 1)
+				if(pResults->rowsCount() == 1)
 				{
-					pData->m_pSqlData->m_pResults->next();
-					int points = (int)pData->m_pSqlData->m_pResults->getInt("Points");
+					pResults->next();
+					int points = (int)pResults->getInt("Points");
 					if (points == 1)
 						str_format(aBuf, sizeof(aBuf), "You earned %d point for finishing this map!", points);
 					else
 						str_format(aBuf, sizeof(aBuf), "You earned %d points for finishing this map!", points);
 					pData->m_pSqlData->GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 
-					str_format(aBuf, sizeof(aBuf), "INSERT INTO %s_points(Name, Points) VALUES ('%s', '%d') ON duplicate key UPDATE Name=VALUES(Name), Points=Points+VALUES(Points);", pData->m_pSqlData->GetPrefix(g_Config.m_SvUseSQLMaster), pData->m_aName, points);
-					pData->m_pSqlData->m_pStatement->execute(aBuf);
+					str_format(aBuf, sizeof(aBuf), "INSERT INTO %s_points(Name, Points) VALUES ('%s', '%d') ON duplicate key UPDATE Name=VALUES(Name), Points=Points+VALUES(Points);", pData->m_pSqlData->GetPrefix(Master), pData->m_aName, points);
+					pStatement->execute(aBuf);
 				}
 			}
 
-			delete pData->m_pSqlData->m_pResults;
+			delete pResults;
 
 			// if no entry found... create a new one
-			str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_race(Map, Name, Timestamp, Time, Server, cp1, cp2, cp3, cp4, cp5, cp6, cp7, cp8, cp9, cp10, cp11, cp12, cp13, cp14, cp15, cp16, cp17, cp18, cp19, cp20, cp21, cp22, cp23, cp24, cp25) VALUES ('%s', '%s', CURRENT_TIMESTAMP(), '%.2f', '%s', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f');", pData->m_pSqlData->GetPrefix(g_Config.m_SvUseSQLMaster), pData->m_pSqlData->m_aMap, pData->m_aName, pData->m_Time, g_Config.m_SvSqlServerName, pData->m_aCpCurrent[0], pData->m_aCpCurrent[1], pData->m_aCpCurrent[2], pData->m_aCpCurrent[3], pData->m_aCpCurrent[4], pData->m_aCpCurrent[5], pData->m_aCpCurrent[6], pData->m_aCpCurrent[7], pData->m_aCpCurrent[8], pData->m_aCpCurrent[9], pData->m_aCpCurrent[10], pData->m_aCpCurrent[11], pData->m_aCpCurrent[12], pData->m_aCpCurrent[13], pData->m_aCpCurrent[14], pData->m_aCpCurrent[15], pData->m_aCpCurrent[16], pData->m_aCpCurrent[17], pData->m_aCpCurrent[18], pData->m_aCpCurrent[19], pData->m_aCpCurrent[20], pData->m_aCpCurrent[21], pData->m_aCpCurrent[22], pData->m_aCpCurrent[23], pData->m_aCpCurrent[24]);
+			str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_race(Map, Name, Timestamp, Time, Server, cp1, cp2, cp3, cp4, cp5, cp6, cp7, cp8, cp9, cp10, cp11, cp12, cp13, cp14, cp15, cp16, cp17, cp18, cp19, cp20, cp21, cp22, cp23, cp24, cp25) VALUES ('%s', '%s', CURRENT_TIMESTAMP(), '%.2f', '%s', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f');", pData->m_pSqlData->GetPrefix(Master), pData->m_pSqlData->m_aMap, pData->m_aName, pData->m_Time, g_Config.m_SvSqlServerName, pData->m_aCpCurrent[0], pData->m_aCpCurrent[1], pData->m_aCpCurrent[2], pData->m_aCpCurrent[3], pData->m_aCpCurrent[4], pData->m_aCpCurrent[5], pData->m_aCpCurrent[6], pData->m_aCpCurrent[7], pData->m_aCpCurrent[8], pData->m_aCpCurrent[9], pData->m_aCpCurrent[10], pData->m_aCpCurrent[11], pData->m_aCpCurrent[12], pData->m_aCpCurrent[13], pData->m_aCpCurrent[14], pData->m_aCpCurrent[15], pData->m_aCpCurrent[16], pData->m_aCpCurrent[17], pData->m_aCpCurrent[18], pData->m_aCpCurrent[19], pData->m_aCpCurrent[20], pData->m_aCpCurrent[21], pData->m_aCpCurrent[22], pData->m_aCpCurrent[23], pData->m_aCpCurrent[24]);
 			dbg_msg("SQL", aBuf);
-			pData->m_pSqlData->m_pStatement->execute(aBuf);
+			pStatement->execute(aBuf);
 
 			dbg_msg("SQL", "Updating time done");
 		}
@@ -676,7 +782,7 @@ void CSqlScore::SaveScoreThread(void *pUser)
 		}
 
 		// disconnect from database
-		pData->m_pSqlData->Disconnect();
+		pData->m_pSqlData->Disconnect(Master);
 	}
 
 	delete pData;
