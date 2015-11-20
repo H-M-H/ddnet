@@ -43,11 +43,11 @@ class CSqlScore: public IScore
 	const char* m_pMasterIp;
 	int m_MasterPort;
 
-	const char* GetDatabase(bool Master = false) { return Master ? m_pMasterDatabase : m_pDatabase ; }
-	const char* GetPrefix(bool Master = false) { return Master ? m_pMasterPrefix : m_pPrefix ; }
-	const char* GetUser(bool Master = false) { return Master ? m_pMasterUser : m_pUser ; }
-	const char* GetPass(bool Master = false) { return Master ? m_pMasterPass : m_pPass ; }
-	const char* GetIp(bool Master = false) { return Master ? m_pMasterIp : m_pIp ; }
+	const char*& GetDatabase(bool Master = false) { return Master ? m_pMasterDatabase : m_pDatabase ; }
+	const char*& GetPrefix(bool Master = false) { return Master ? m_pMasterPrefix : m_pPrefix ; }
+	const char*& GetUser(bool Master = false) { return Master ? m_pMasterUser : m_pUser ; }
+	const char*& GetPass(bool Master = false) { return Master ? m_pMasterPass : m_pPass ; }
+	const char*& GetIp(bool Master = false) { return Master ? m_pMasterIp : m_pIp ; }
 	int GetPort(bool Master = false) { return Master ? m_MasterPort : m_Port ; }
 
 	CGameContext *GameServer()
