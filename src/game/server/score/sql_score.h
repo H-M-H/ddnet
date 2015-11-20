@@ -106,7 +106,7 @@ public:
 			void *pUserData, int Debut = 1);
 	virtual void RandomMap(int ClientID, int stars);
 	virtual void RandomUnfinishedMap(int ClientID, int stars);
-	virtual void SaveTeam(int Team, const char* Code, int ClientID, const char* Server);
+	virtual void SaveTeam(int Team, const char* Code, int ClientID);
 	virtual void LoadTeam(const char* Code, int ClientID);
 	static void agoTimeToString(int agoTime, char agoString[]);
 };
@@ -158,7 +158,6 @@ struct CSqlTeamSave
 	int m_Team;
 	int m_ClientID;
 	char m_Code[128];
-	char m_Server[5];
 	CSqlScore *m_pSqlData;
 };
 

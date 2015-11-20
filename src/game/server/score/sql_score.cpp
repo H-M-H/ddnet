@@ -23,12 +23,12 @@ CSqlScore::CSqlScore(CGameContext *pGameServer) : m_pGameServer(pGameServer),
 		m_pPass(g_Config.m_SvSqlPw),
 		m_pIp(g_Config.m_SvSqlIp),
 		m_Port(g_Config.m_SvSqlPort),
-		m_pMasterDatabase(g_Config.m_SvSqlDatabase),
-		m_pMasterPrefix(g_Config.m_SvSqlPrefix),
-		m_pMasterUser(g_Config.m_SvSqlUser),
-		m_pMasterPass(g_Config.m_SvSqlPw),
-		m_pMasterIp(g_Config.m_SvSqlIp),
-		m_MasterPort(g_Config.m_SvSqlPort)
+		m_pMasterDatabase(g_Config.m_SvSqlMasterDatabase),
+		m_pMasterPrefix(g_Config.m_SvSqlMasterPrefix),
+		m_pMasterUser(g_Config.m_SvSqlMasterUser),
+		m_pMasterPass(g_Config.m_SvSqlMasterPw),
+		m_pMasterIp(g_Config.m_SvSqlMasterIp),
+		m_MasterPort(g_Config.m_SvSqlMasterPort)
 {
 	m_pDriver = NULL;
 	str_copy(m_aMap, g_Config.m_SvMap, sizeof(m_aMap));
@@ -185,7 +185,7 @@ void CSqlScore::Init()
 				str_format(aBuf, sizeof(aBuf), "CREATE TABLE IF NOT EXISTS %s_maps (Map VARCHAR(128) BINARY NOT NULL, Server VARCHAR(32) BINARY NOT NULL, Mapper VARCHAR(128) BINARY NOT NULL, Points INT DEFAULT 0, Stars INT DEFAULT 0, Timestamp TIMESTAMP, UNIQUE KEY Map (Map)) CHARACTER SET utf8 ;", GetPrefix());
 				m_pStatement->execute(aBuf);
 
-				str_format(aBuf, sizeof(aBuf), "CREATE TABLE IF NOT EXISTS %s_saves (Savegame TEXT CHARACTER SET utf8 BINARY NOT NULL, Map VARCHAR(128) BINARY NOT NULL, Code VARCHAR(128) BINARY NOT NULL, Timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, Server CHAR(4), UNIQUE KEY (Map, Code)) CHARACTER SET utf8 ;", GetPrefix());
+				str_format(aBuf, sizeof(aBuf), "CREATE TABLE IF NOT EXISTS %s_saves (Savegame TEXT CHARACTER SET utf8 BINARY NOT NULL, Map VARCHAR(128) BINARY NOT NULL, Code VARCHAR(128) BINARY NOT NULL, Timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY (Map, Code)) CHARACTER SET utf8 ;", GetPrefix());
 				m_pStatement->execute(aBuf);
 
 				str_format(aBuf, sizeof(aBuf), "CREATE TABLE IF NOT EXISTS %s_points (Name VARCHAR(%d) BINARY NOT NULL, Points INT DEFAULT 0, UNIQUE KEY Name (Name)) CHARACTER SET utf8 ;", GetPrefix(), MAX_NAME_LENGTH);
@@ -1590,7 +1590,7 @@ void CSqlScore::RandomUnfinishedMap(int ClientID, int stars)
 	thread_detach(RandomUnfinishedThread);
 }
 
-void CSqlScore::SaveTeam(int Team, const char* Code, int ClientID, const char* Server)
+void CSqlScore::SaveTeam(int Team, const char* Code, int ClientID)
 {
 	if((g_Config.m_SvTeam == 3 || (Team > 0 && Team < MAX_CLIENTS)) && ((CGameControllerDDRace*)(GameServer()->m_pController))->m_Teams.Count(Team) > 0)
 	{
@@ -1608,7 +1608,6 @@ void CSqlScore::SaveTeam(int Team, const char* Code, int ClientID, const char* S
 	Tmp->m_Team = Team;
 	Tmp->m_ClientID = ClientID;
 	str_copy(Tmp->m_Code, Code, 32);
-	str_copy(Tmp->m_Server, Server, sizeof(Tmp->m_Server));
 	Tmp->m_pSqlData = this;
 
 	void *SaveThread = thread_init(SaveTeamThread, Tmp);
@@ -1675,7 +1674,7 @@ void CSqlScore::SaveTeamThread(void *pUser)
 				delete pData->m_pSqlData->m_pResults;
 
 				char aBuf[65536];
-				str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_saves(Savegame, Map, Code, Timestamp, Server) VALUES ('%s', '%s', '%s', CURRENT_TIMESTAMP(), '%s')",  pData->m_pSqlData->GetPrefix(), TeamString, Map, pData->m_Code, pData->m_Server);
+				str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_saves(Savegame, Map, Code, Timestamp) VALUES ('%s', '%s', '%s', CURRENT_TIMESTAMP())",  pData->m_pSqlData->GetPrefix(), TeamString, Map, pData->m_Code);
 				dbg_msg("SQL", aBuf);
 				pData->m_pSqlData->m_pStatement->execute(aBuf);
 
