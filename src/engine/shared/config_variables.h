@@ -225,6 +225,14 @@ MACRO_CONFIG_STR(SvSqlServerName, sv_sql_servername, 5, "UNK", CFGFLAG_SERVER, "
 MACRO_CONFIG_STR(SvSqlPrefix, sv_sql_prefix, 16, "record", CFGFLAG_SERVER, "SQL Database table prefix")
 MACRO_CONFIG_INT(SvSaveGames, sv_savegames, 1, 0, 1, CFGFLAG_SERVER, "Enables savegames (/save and /load)")
 MACRO_CONFIG_INT(SvSaveGamesDelay, sv_savegames_delay, 60, 0, 10000, CFGFLAG_SERVER, "Delay in seconds for loading a savegame")
+
+MACRO_CONFIG_INT(SvUseSQLMaster, sv_use_sqlmaster, 0, 0, 1, CFGFLAG_SERVER, "All SQL-writes will be redirected to the sqlmaster")
+MACRO_CONFIG_STR(SvSqlMasterUser, sv_sqlmaster_user, 32, "nameless", CFGFLAG_SERVER, "SQL User")
+MACRO_CONFIG_STR(SvSqlMasterPw, sv_sqlmaster_pw, 32, "tee", CFGFLAG_SERVER, "SQL Password")
+MACRO_CONFIG_STR(SvSqlMasterIp, sv_sqlmaster_ip, 32, "127.0.0.1", CFGFLAG_SERVER, "SQL Database IP")
+MACRO_CONFIG_INT(SvSqlMasterPort, sv_sqlmaster_port, 3306, 0, 65535, CFGFLAG_SERVER, "SQL Database port")
+MACRO_CONFIG_STR(SvSqlMasterDatabase, sv_sqlmaster_database, 16, "teeworlds", CFGFLAG_SERVER, "SQL Database name")
+MACRO_CONFIG_STR(SvSqlMasterPrefix, sv_sqlmaster_prefix, 16, "record", CFGFLAG_SERVER, "SQL Database table prefix")
 #endif
 
 MACRO_CONFIG_INT(SvDDRaceRules, sv_ddrace_rules, 1, 0, 1, CFGFLAG_SERVER, "Whether the default mod rules are displayed or not")

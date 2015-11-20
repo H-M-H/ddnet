@@ -31,6 +31,20 @@ class CSqlScore: public IScore
 	char m_aMap[64];
 	int m_Port;
 
+	const char* m_pMasterDatabase;
+	const char* m_pMasterPrefix;
+	const char* m_pMasterUser;
+	const char* m_pMasterPass;
+	const char* m_pMasterIp;
+	int m_MasterPort;
+
+	const char* GetDatabase(bool Master = false) { return Master ? m_pMasterDatabase : m_pDatabase ; }
+	const char* GetPrefix(bool Master = false) { return Master ? m_pMasterPrefix : m_pPrefix ; }
+	const char* GetUser(bool Master = false) { return Master ? m_pMasterUser : m_pUser ; }
+	const char* GetPass(bool Master = false) { return Master ? m_pMasterPass : m_pPass ; }
+	const char* GetIp(bool Master = false) { return Master ? m_pMasterIp : m_pIp ; }
+	int GetPort(bool Master = false) { return Master ? m_MasterPort : m_Port ; }
+
 	CGameContext *GameServer()
 	{
 		return m_pGameServer;
@@ -59,7 +73,7 @@ class CSqlScore: public IScore
 
 	void Init();
 
-	bool Connect();
+	bool Connect(bool Master = false);
 	void Disconnect();
 
 	void FuzzyString(char *pString);
