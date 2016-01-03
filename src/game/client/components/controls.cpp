@@ -246,6 +246,19 @@ int CControls::SnapInput(int *pData)
 	}
 	else
 	{
+		// NEALSON
+
+		// automagically switch to hammer if there is someone to hammer
+		for (int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if (Client()->m_LocalIDs[g_Config.m_ClDummy] == i)
+				continue;
+
+			if (distance(GameClient()->m_aClients[Client()->m_LocalIDs[g_Config.m_ClDummy]].m_Predicted.m_Pos, GameClient()->m_aClients[i].m_Predicted.m_Pos) < g_Config.m_ClHammerSwitchDistance)
+				m_InputData[g_Config.m_ClDummy].m_WantedWeapon = 1;
+		}
+		// END: NEALSON
+
 		m_InputData[g_Config.m_ClDummy].m_TargetX = (int)m_MousePos[g_Config.m_ClDummy].x;
 		m_InputData[g_Config.m_ClDummy].m_TargetY = (int)m_MousePos[g_Config.m_ClDummy].y;
 		if(!m_InputData[g_Config.m_ClDummy].m_TargetX && !m_InputData[g_Config.m_ClDummy].m_TargetY)
