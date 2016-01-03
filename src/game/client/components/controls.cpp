@@ -252,6 +252,9 @@ int CControls::SnapInput(int *pData)
 		bool IsTeeClose = false;
 		for (int i = 0; i < MAX_CLIENTS; i++)
 		{
+			if(!GameClient()->m_aClients[i].m_Active)
+				continue;
+				
 			if (Client()->m_LocalIDs[g_Config.m_ClDummy] == i)
 				continue;
 
