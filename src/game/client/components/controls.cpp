@@ -247,15 +247,30 @@ int CControls::SnapInput(int *pData)
 	else
 	{
 		// NEALSON
-
+		static bool WasTeeClose = false;
 		// automagically switch to hammer if there is someone to hammer
+		bool IsTeeClose = false;
 		for (int i = 0; i < MAX_CLIENTS; i++)
 		{
 			if (Client()->m_LocalIDs[g_Config.m_ClDummy] == i)
 				continue;
 
 			if (distance(GameClient()->m_aClients[Client()->m_LocalIDs[g_Config.m_ClDummy]].m_Predicted.m_Pos, GameClient()->m_aClients[i].m_Predicted.m_Pos) < g_Config.m_ClHammerSwitchDistance)
-				m_InputData[g_Config.m_ClDummy].m_WantedWeapon = 1;
+			{
+				IsTeeClose = true;
+				break;
+			}
+		}
+
+		if (IsTeeClose)
+		{
+			m_InputData[g_Config.m_ClDummy].m_WantedWeapon = 1;
+			WasTeeClose = true;
+		}
+		else if (WasTeeClose)
+		{
+			m_InputData[g_Config.m_ClDummy].m_WantedWeapon = 2;
+			WasTeeClose = false;
 		}
 		// END: NEALSON
 
