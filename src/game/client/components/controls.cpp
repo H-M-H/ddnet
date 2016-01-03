@@ -254,7 +254,7 @@ int CControls::SnapInput(int *pData)
 		{
 			if(!GameClient()->m_aClients[i].m_Active)
 				continue;
-				
+
 			if (Client()->m_LocalIDs[g_Config.m_ClDummy] == i)
 				continue;
 
@@ -268,6 +268,8 @@ int CControls::SnapInput(int *pData)
 		if (IsTeeClose)
 		{
 			m_InputData[g_Config.m_ClDummy].m_WantedWeapon = 1;
+			if (WasTeeClose && g_Config.m_ClAutoHammer)
+				m_InputData[g_Config.m_ClDummy].m_Fire++;
 			WasTeeClose = true;
 		}
 		else if (WasTeeClose)
