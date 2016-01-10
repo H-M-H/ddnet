@@ -250,6 +250,7 @@ int CControls::SnapInput(int *pData)
 		static bool WasTeeClose = false;
 		// automagically switch to hammer if there is someone to hammer
 		bool IsTeeClose = false;
+		bool Hammer = false;
 		for (int i = 0; i < MAX_CLIENTS; i++)
 		{
 			if(!GameClient()->m_aClients[i].m_Active)
@@ -261,6 +262,8 @@ int CControls::SnapInput(int *pData)
 			if (distance(GameClient()->m_aClients[Client()->m_LocalIDs[g_Config.m_ClDummy]].m_Predicted.m_Pos, GameClient()->m_aClients[i].m_Predicted.m_Pos) < g_Config.m_ClHammerSwitchDistance)
 			{
 				IsTeeClose = true;
+				if (GameClient()->m_aClients[i].m_Predicted.m_ActiveWeapon != WEAPON_NINJA)
+					Hammer = true;
 				break;
 			}
 		}
@@ -268,7 +271,7 @@ int CControls::SnapInput(int *pData)
 		if (IsTeeClose)
 		{
 			m_InputData[g_Config.m_ClDummy].m_WantedWeapon = 1;
-			if (WasTeeClose && g_Config.m_ClAutoHammer)
+			if (WasTeeClose && g_Config.m_ClAutoHammer && Hammer)
 				m_InputData[g_Config.m_ClDummy].m_Fire++;
 			WasTeeClose = true;
 		}
