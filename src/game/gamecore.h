@@ -231,7 +231,7 @@ public:
 	int m_Colliding;
 	bool m_LeftWall;
 
-	void LimitForce(vec2 *Force);
+	void LimitForce(vec2& Force);
 	void ApplyForce(vec2 Force);
 
 private:
