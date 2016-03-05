@@ -187,6 +187,7 @@ class CCharacterCore
 	std::map<int, std::vector<vec2> > *m_pTeleOuts;
 public:
 	vec2 m_Pos;
+	vec2 m_PrevPos;
 	vec2 m_Vel;
 	bool m_Hook;
 	bool m_Collision;

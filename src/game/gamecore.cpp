@@ -88,6 +88,7 @@ void CCharacterCore::Init(CWorldCore *pWorld, CCollision *pCollision, CTeamsCore
 void CCharacterCore::Reset()
 {
 	m_Pos = vec2(0,0);
+	m_PrevPos = vec2(0,0);
 	m_Vel = vec2(0,0);
 	m_NewHook = false;
 	m_HookPos = vec2(0,0);
@@ -106,6 +107,7 @@ void CCharacterCore::Reset()
 void CCharacterCore::Tick(bool UseInput, bool IsClient)
 {
 	float PhysSize = 28.0f;
+	m_PrevPos = m_Pos;
 	int MapIndex = Collision()->GetPureMapIndex(m_Pos);;
 	int MapIndexL = Collision()->GetPureMapIndex(vec2(m_Pos.x + (28/2)+4,m_Pos.y));
 	int MapIndexR = Collision()->GetPureMapIndex(vec2(m_Pos.x - (28/2)-4,m_Pos.y));
@@ -143,8 +145,6 @@ void CCharacterCore::Tick(bool UseInput, bool IsClient)
 	m_TileSIndexT = (UseInput && IsRightTeam(MapIndexT))?Collision()->GetDTileIndex(MapIndexT):0;
 	m_TileSFlagsT = (UseInput && IsRightTeam(MapIndexT))?Collision()->GetDTileFlags(MapIndexT):0;
 	m_TriggeredEvents = 0;
-
-	vec2 PrevPos = m_Pos;
 
 	// get ground state
 	bool Grounded = false;
@@ -415,7 +415,7 @@ void CCharacterCore::Tick(bool UseInput, bool IsClient)
 			// handle player <-> player collision
 			float Distance = distance(m_Pos, pCharCore->m_Pos);
 			vec2 Dir = normalize(m_Pos - pCharCore->m_Pos);
-			if(pCharCore->m_Collision && this->m_Collision && m_pWorld->m_Tuning[g_Config.m_ClDummy].m_PlayerCollision && Distance < PhysSize*1.25f && Distance > 0.0f)
+			if(pCharCore->m_Collision && m_Collision && m_pWorld->m_Tuning[g_Config.m_ClDummy].m_PlayerCollision && Distance < PhysSize*1.25f && Distance > 0.0f)
 			{
 				float a = (PhysSize*1.45f - Distance);
 				float Velocity = 0.5f;
@@ -537,28 +537,28 @@ void CCharacterCore::Tick(bool UseInput, bool IsClient)
 			if(((m_TileIndex == TILE_STOP && m_TileFlags == ROTATION_270) || (m_TileIndexL == TILE_STOP && m_TileFlagsL == ROTATION_270) || (m_TileIndexL == TILE_STOPS && (m_TileFlagsL == ROTATION_90 || m_TileFlagsL ==ROTATION_270)) || (m_TileIndexL == TILE_STOPA) || (m_TileFIndex == TILE_STOP && m_TileFFlags == ROTATION_270) || (m_TileFIndexL == TILE_STOP && m_TileFFlagsL == ROTATION_270) || (m_TileFIndexL == TILE_STOPS && (m_TileFFlagsL == ROTATION_90 || m_TileFFlagsL == ROTATION_270)) || (m_TileFIndexL == TILE_STOPA) || (m_TileSIndex == TILE_STOP && m_TileSFlags == ROTATION_270) || (m_TileSIndexL == TILE_STOP && m_TileSFlagsL == ROTATION_270) || (m_TileSIndexL == TILE_STOPS && (m_TileSFlagsL == ROTATION_90 || m_TileSFlagsL == ROTATION_270)) || (m_TileSIndexL == TILE_STOPA)) && m_Vel.x > 0)
 			{
 				if((int)m_pCollision->GetPos(MapIndexL).x < (int)m_Pos.x)
-					m_Pos = PrevPos;
+					m_Pos = m_PrevPos;
 				m_Vel.x = 0;
 			}
 			if(((m_TileIndex == TILE_STOP && m_TileFlags == ROTATION_90) || (m_TileIndexR == TILE_STOP && m_TileFlagsR == ROTATION_90) || (m_TileIndexR == TILE_STOPS && (m_TileFlagsR == ROTATION_90 || m_TileFlagsR == ROTATION_270)) || (m_TileIndexR == TILE_STOPA) || (m_TileFIndex == TILE_STOP && m_TileFFlags == ROTATION_90) || (m_TileFIndexR == TILE_STOP && m_TileFFlagsR == ROTATION_90) || (m_TileFIndexR == TILE_STOPS && (m_TileFFlagsR == ROTATION_90 || m_TileFFlagsR == ROTATION_270)) || (m_TileFIndexR == TILE_STOPA) || (m_TileSIndex == TILE_STOP && m_TileSFlags == ROTATION_90) || (m_TileSIndexR == TILE_STOP && m_TileSFlagsR == ROTATION_90) || (m_TileSIndexR == TILE_STOPS && (m_TileSFlagsR == ROTATION_90 || m_TileSFlagsR == ROTATION_270)) || (m_TileSIndexR == TILE_STOPA)) && m_Vel.x < 0)
 			{
 				if((int)m_pCollision->GetPos(MapIndexR).x)
 					if((int)m_pCollision->GetPos(MapIndexR).x < (int)m_Pos.x)
-						m_Pos = PrevPos;
+						m_Pos = m_PrevPos;
 				m_Vel.x = 0;
 			}
 			if(((m_TileIndex == TILE_STOP && m_TileFlags == ROTATION_180) || (m_TileIndexB == TILE_STOP && m_TileFlagsB == ROTATION_180) || (m_TileIndexB == TILE_STOPS && (m_TileFlagsB == ROTATION_0 || m_TileFlagsB == ROTATION_180)) || (m_TileIndexB == TILE_STOPA) || (m_TileFIndex == TILE_STOP && m_TileFFlags == ROTATION_180) || (m_TileFIndexB == TILE_STOP && m_TileFFlagsB == ROTATION_180) || (m_TileFIndexB == TILE_STOPS && (m_TileFFlagsB == ROTATION_0 || m_TileFFlagsB == ROTATION_180)) || (m_TileFIndexB == TILE_STOPA) || (m_TileSIndex == TILE_STOP && m_TileSFlags == ROTATION_180) || (m_TileSIndexB == TILE_STOP && m_TileSFlagsB == ROTATION_180) || (m_TileSIndexB == TILE_STOPS && (m_TileSFlagsB == ROTATION_0 || m_TileSFlagsB == ROTATION_180)) || (m_TileSIndexB == TILE_STOPA)) && m_Vel.y < 0)
 			{
 				if((int)m_pCollision->GetPos(MapIndexB).y)
 					if((int)m_pCollision->GetPos(MapIndexB).y < (int)m_Pos.y)
-						m_Pos = PrevPos;
+						m_Pos = m_PrevPos;
 				m_Vel.y = 0;
 			}
 			if(((m_TileIndex == TILE_STOP && m_TileFlags == ROTATION_0) || (m_TileIndexT == TILE_STOP && m_TileFlagsT == ROTATION_0) || (m_TileIndexT == TILE_STOPS && (m_TileFlagsT == ROTATION_0 || m_TileFlagsT == ROTATION_180)) || (m_TileIndexT == TILE_STOPA) || (m_TileFIndex == TILE_STOP && m_TileFFlags == ROTATION_0) || (m_TileFIndexT == TILE_STOP && m_TileFFlagsT == ROTATION_0) || (m_TileFIndexT == TILE_STOPS && (m_TileFFlagsT == ROTATION_0 || m_TileFFlagsT == ROTATION_180)) || (m_TileFIndexT == TILE_STOPA) || (m_TileSIndex == TILE_STOP && m_TileSFlags == ROTATION_0) || (m_TileSIndexT == TILE_STOP && m_TileSFlagsT == ROTATION_0) || (m_TileSIndexT == TILE_STOPS && (m_TileSFlagsT == ROTATION_0 || m_TileSFlagsT == ROTATION_180)) || (m_TileSIndexT == TILE_STOPA)) && m_Vel.y > 0)
 			{
 				if((int)m_pCollision->GetPos(MapIndexT).y)
 					if((int)m_pCollision->GetPos(MapIndexT).y < (int)m_Pos.y)
-						m_Pos = PrevPos;
+						m_Pos = m_PrevPos;
 				m_Vel.y = 0;
 				m_Jumped = 0;
 				m_JumpedTotal = 0;
@@ -595,7 +595,7 @@ void CCharacterCore::Move()
 
 	m_Vel.x = m_Vel.x*(1.0f/RampValue);
 
-	if(m_pWorld && m_pWorld->m_Tuning[g_Config.m_ClDummy].m_PlayerCollision && this->m_Collision)
+	if(m_pWorld && m_pWorld->m_Tuning[g_Config.m_ClDummy].m_PlayerCollision && m_Collision)
 	{
 		// check player collision
 		float Distance = distance(m_Pos, NewPos);
@@ -610,12 +610,12 @@ void CCharacterCore::Move()
 				CCharacterCore *pCharCore = m_pWorld->m_apCharacters[p];
 				if(!pCharCore || pCharCore == this || !pCharCore->m_Collision || (m_Id != -1 && !m_pTeams->CanCollide(m_Id, p)))
 					continue;
-				float D = distance(Pos, pCharCore->m_Pos);
+				float D = distance(Pos, pCharCore->m_PrevPos);
 				if(D < 28.0f && D > 0.0f)
 				{
 					if(a > 0.0f)
 						m_Pos = LastPos;
-					else if(distance(NewPos, pCharCore->m_Pos) > D)
+					else if(distance(NewPos, pCharCore->m_PrevPos) > D)
 						m_Pos = NewPos;
 					return;
 				}
@@ -623,7 +623,7 @@ void CCharacterCore::Move()
 				{
 					if(a > 0.0f)
 						m_Pos = LastPos;
-					else if(distance(NewPos, pCharCore->m_Pos) > D)
+					else if(distance(NewPos, pCharCore->m_PrevPos) > D)
 						m_Pos = NewPos;
 					return;
 				}
