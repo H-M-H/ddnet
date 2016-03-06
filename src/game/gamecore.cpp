@@ -600,7 +600,7 @@ void CCharacterCore::Move()
 		// check player collision
 		float Distance = distance(m_Pos, NewPos);
 		int End = Distance+1;
-		vec2 LastPos = NewPos;
+		vec2 LastPos = m_Pos;
 		for(int i = 0; i < End; i++)
 		{
 			float a = i/Distance;
@@ -613,7 +613,10 @@ void CCharacterCore::Move()
 				float D = distance(Pos, pCharCore->m_PrevPos);
 				if(D < 28.0f - clamp(absolute(pCharCore->m_Vel.y), 0.0f, 28.0f) && D > 0.0f)
 				{
-					m_Pos = LastPos;
+					if(a > 0.0f)
+						m_Pos = LastPos;
+					else if(distance(NewPos, pCharCore->m_PrevPos) > D)
+						m_Pos = NewPos;
 					return;
 				}
 			}
