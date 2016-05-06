@@ -27,6 +27,50 @@
 #include "players.h"
 #include <stdio.h>
 
+
+void CPlayers::ConGetPlayerSkin(IConsole::IResult *pResult, void *pUserData)
+{
+	CPlayers *pSelf = (CPlayers *)pUserData;
+
+	int ID = pResult->GetInteger(0);
+
+	if (ID < 0 || ID >= MAX_CLIENTS)
+		return;
+
+	if (!pSelf->m_pClient->m_aClients[ID].m_Active)
+		return;
+
+	/*
+	 * For reference: how to convert those colors:
+	 * vec3 VecBodyHSL = RgbToHsl(vec3(pSelf->m_aRenderInfo[ID].m_ColorBody.r, pSelf->m_aRenderInfo[ID].m_ColorBody.g, pSelf->m_aRenderInfo[ID].m_ColorBody.b));
+	 *
+	 * int BodyHsl = (((int)VecBodyHSL.h) << 16) + (((int)VecBodyHSL.s) << 8) + clamp((round_to_int(2.f * VecBodyHSL.l) - 255), 0, 255);
+	 *
+	 * vec3 VecFeetHSL = RgbToHsl(vec3(pSelf->m_aRenderInfo[ID].m_ColorFeet.r, pSelf->m_aRenderInfo[ID].m_ColorFeet.g, pSelf->m_aRenderInfo[ID].m_ColorFeet.b));
+	 *
+	 * int FeetHsl = (((int)VecFeetHSL.h) << 16) + (((int)VecFeetHSL.s) << 8) + clamp((round_to_int(2.f * VecFeetHSL.l) - 255), 0, 255);
+	 */
+
+	char aBuf[128];
+
+	str_format(aBuf, sizeof(aBuf), "Skin: %s", pSelf->m_pClient->m_aClients[ID].m_aSkinName);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "players", aBuf);
+
+	str_format(aBuf, sizeof(aBuf), "Color body: %d", pSelf->m_pClient->m_aClients[ID].m_ColorBody);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "players", aBuf);
+
+	str_format(aBuf, sizeof(aBuf), "Color feet: %d", pSelf->m_pClient->m_aClients[ID].m_ColorFeet);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "players", aBuf);
+
+	str_format(aBuf, sizeof(aBuf), "Customcolor: %d", pSelf->m_pClient->m_aClients[ID].m_UseCustomColor);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "players", aBuf);
+}
+
+void CPlayers::OnConsoleInit()
+{
+	Console()->Register("get_player_skin", "i[player-id]", CFGFLAG_CLIENT, ConGetPlayerSkin, this, "Get skininfo from player.");
+}
+
 void CPlayers::RenderHand(CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset)
 {
 	// for drawing hand

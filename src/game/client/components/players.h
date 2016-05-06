@@ -39,7 +39,10 @@ class CPlayers : public CComponent
 		vec2 &Position
 	);
 
+	static void ConGetPlayerSkin(IConsole::IResult *pResult, void *pUserData);
+
 public:
+	virtual void OnConsoleInit();
 	virtual void OnRender();
 };
 
