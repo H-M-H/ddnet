@@ -33,6 +33,8 @@
 
 	#include <dirent.h>
 
+	#include <uuid/uuid.h>
+
 	#if defined(CONF_PLATFORM_MACOSX)
 		// some lock and pthread functions are already defined in headers
 		// included from Carbon.h
@@ -60,6 +62,7 @@
 	#include <process.h>
 	#include <shellapi.h>
 	#include <wincrypt.h>
+	#include <Rpc.h>
 #else
 	#error NOT IMPLEMENTED
 #endif
@@ -2567,6 +2570,61 @@ int secure_rand()
 	unsigned int i;
 	secure_random_fill(&i, sizeof(i));
 	return (int)(i%RAND_MAX);
+}
+
+void create_uuid(char* aUUID)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	UUID uuid;
+	UuidCreate(&uuid);
+
+	unsigned char* str;
+	UuidToStringA(&uuid, &str);
+
+	str_copy(aUUID, str, sizeof(aUUID));
+
+	RpcStringFreeA(&str);
+#else
+	uuid_t uuid;
+	uuid_generate_random(uuid);
+	uuid_unparse(uuid, aUUID);
+#endif
+}
+
+void create_uuid_hex(char* aUUID)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	UUID uuid;
+	UuidCreate(&uuid);
+
+	unsigned char* aBuf;
+	UuidToStringA(&uuid, &aBuf);
+
+	aBuf[8] = '\0';
+	aBuf[13] = '\0';
+	aBuf[18] = '\0';
+	aBuf[23] = '\0';
+	str_format(aUUID, sizeof(aBuf) - 4, "%s%s%s%s%s", &aBuf[0], &aBuf[9], &aBuf[14], &aBuf[19], &aBuf[24]);
+
+	RpcStringFreeA(&aBuf);
+#else
+	char aBuf[37];
+	uuid_t uuid;
+	uuid_generate_random(uuid);
+	uuid_unparse(uuid, aBuf);
+
+	// a normal uuid looks like this: 6a63f3bc-1614-4025-8be3-7599c66f2ee3
+	// the following gets rid of the dashes in between and gets the plain hexcodes from
+	// the stringrepresentation of the uuid: 6a63f3bc161440258be37599c66f2ee3
+
+	aBuf[8] = '\0';
+	aBuf[13] = '\0';
+	aBuf[18] = '\0';
+	aBuf[23] = '\0';
+
+	// concatenate them again
+	str_format(aUUID, sizeof(aBuf) - 4, "%s%s%s%s%s", &aBuf[0], &aBuf[9], &aBuf[14], &aBuf[19], &aBuf[24]);
+#endif
 }
 
 #if defined(__cplusplus)

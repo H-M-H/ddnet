@@ -572,9 +572,8 @@ bool CSqlScore::SaveTeamScoreThread(CSqlServer* pSqlServer, const CSqlData *pGam
 		IOHANDLE File = io_open(g_Config.m_SvSqlFailureFile, IOFLAG_APPEND);
 		if(File)
 		{
-			const char pUUID[] = "SET @id = UUID();";
-			io_write(File, pUUID, sizeof(pUUID) - 1);
-			io_write_newline(File);
+			char aUUID[33];
+			create_uuid_hex(aUUID);
 
 			char aTimestamp [20];
 			sqlstr::getTimeStamp(aTimestamp, sizeof(aTimestamp));
@@ -582,7 +581,7 @@ bool CSqlScore::SaveTeamScoreThread(CSqlServer* pSqlServer, const CSqlData *pGam
 			char aBuf[2300];
 			for(unsigned int i = 0; i < pData->m_Size; i++)
 			{
-				str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %%s_teamrace(Map, Name, Timestamp, Time, ID) VALUES ('%s', '%s', '%s', '%.2f', @id);", pData->m_Map.ClrStr(), pData->m_aNames[i].ClrStr(), aTimestamp, pData->m_Time);
+				str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %%s_teamrace(Map, Name, Timestamp, Time, ID) VALUES ('%s', '%s', '%s', '%.2f', UNHEX('%s'));", pData->m_Map.ClrStr(), pData->m_aNames[i].ClrStr(), aTimestamp, pData->m_Time, aUUID);
 				io_write(File, aBuf, str_length(aBuf));
 				io_write_newline(File);
 			}
@@ -670,12 +669,13 @@ bool CSqlScore::SaveTeamScoreThread(CSqlServer* pSqlServer, const CSqlData *pGam
 		}
 		else
 		{
-			pSqlServer->executeSql("SET @id = UUID();");
+			char aUUID[33];
+			create_uuid_hex(aUUID);
 
 			for(unsigned int i = 0; i < pData->m_Size; i++)
 			{
-			// if no entry found... create a new one
-				str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_teamrace(Map, Name, Timestamp, Time, ID) VALUES ('%s', '%s', CURRENT_TIMESTAMP(), '%.2f', @id);", pSqlServer->GetPrefix(), pData->m_Map.ClrStr(), pData->m_aNames[i].ClrStr(), pData->m_Time);
+				// if no entry found... create a new one
+				str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_teamrace(Map, Name, Timestamp, Time, ID) VALUES ('%s', '%s', CURRENT_TIMESTAMP(), '%.2f', UNHEX('%s'));", pSqlServer->GetPrefix(), pData->m_Map.ClrStr(), pData->m_aNames[i].ClrStr(), pData->m_Time, aUUID);
 				dbg_msg("sql", aBuf);
 				pSqlServer->executeSql(aBuf);
 			}

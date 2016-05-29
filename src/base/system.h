@@ -1402,6 +1402,32 @@ void secure_random_fill(void *bytes, size_t length);
 */
 int secure_rand();
 
+/*
+	Function: create_uuid
+		Fills aUUID with a UUID.
+
+	Parameters:
+		aUUID - Destination of the UUID to be created.
+
+	Remarks:
+		- aUUID will be zero-terminated.
+		- aUUID has to be at least 37 bytes long.
+*/
+void create_uuid(char* aUUID);
+
+/*
+	Function: create_uuid_hex
+		Fills aUUID with a UUID as plain hex.
+
+	Parameters:
+		aUUID - Destination of the UUID to be created.
+
+	Remarks:
+		- aUUID will be zero-terminated.
+		- aUUID has to be at least 33 bytes long.
+*/
+void create_uuid_hex(char* aUUID);
+
 #ifdef __cplusplus
 }
 #endif
