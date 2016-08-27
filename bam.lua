@@ -18,6 +18,7 @@ Import("other/freetype.lua")
 Import("other/curl.lua")
 Import("other/opusfile.lua")
 Import("other/mysql.lua")
+Import("other/ffmpeg/ffmpeg.lua")
 
 --- Setup Config -------
 config = NewConfig()
@@ -31,6 +32,7 @@ config:Add(FreeType.OptFind("freetype", true))
 config:Add(Curl.OptFind("curl", true))
 config:Add(Opusfile.OptFind("opusfile", true))
 config:Add(Mysql.OptFind("mysql", false))
+config:Add(FFMPEG.OptFind("ffmpeg", false))
 config:Add(OptString("websockets", false))
 config:Finalize("config.lua")
 
@@ -340,6 +342,7 @@ function build(settings)
 	config.freetype:Apply(client_settings)
 	config.curl:Apply(client_settings)
 	config.opusfile:Apply(client_settings)
+	config.ffmpeg:Apply(client_settings)
 
 	if family == "unix" and (platform == "macosx" or platform == "linux") then
 		engine_settings.link.libs:Add("dl")
