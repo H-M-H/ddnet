@@ -81,10 +81,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	class CFriends m_Friends;
 	class CFriends m_Foes;
 
-#if defined(CONF_VIDEORECORDER)
-	class CVideo* m_pVideo;
-#endif
-
 	char m_aServerAddressStr[256];
 
 	unsigned m_SnapshotParts;
@@ -213,10 +209,6 @@ public:
 	IStorage *Storage() { return m_pStorage; }
 	IFetcher *Fetcher() { return m_pFetcher; }
 	IUpdater *Updater() { return m_pUpdater; }
-
-#if defined(CONF_VIDEORECORDER)
-	class CVideo* Video() { return m_pVideo; }
-#endif
 
 	CClient();
 

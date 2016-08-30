@@ -1,9 +1,10 @@
+#ifndef ENGINE_CLIENT_BACKEND_SDL_H
+#define ENGINE_CLIENT_BACKEND_SDL_H
+
 
 #include "SDL.h"
 
 #include "graphics_threaded.h"
-
-
 
 # if defined(CONF_PLATFORM_MACOSX)
 	#include <objc/objc-runtime.h>
@@ -324,3 +325,5 @@ public:
 	
 	virtual bool IsOpenGL3_3() { return m_UseOpenGL3_3; }
 };
+
+#endif
