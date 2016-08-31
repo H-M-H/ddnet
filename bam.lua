@@ -32,7 +32,7 @@ config:Add(FreeType.OptFind("freetype", true))
 config:Add(Curl.OptFind("curl", true))
 config:Add(Opusfile.OptFind("opusfile", true))
 config:Add(Mysql.OptFind("mysql", false))
-config:Add(FFMPEG.OptFind("ffmpeg", false))
+config:Add(ffmpeg.OptFind("ffmpeg", false))
 config:Add(OptString("websockets", false))
 config:Finalize("config.lua")
 
