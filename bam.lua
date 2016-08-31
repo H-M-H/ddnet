@@ -152,14 +152,17 @@ if family == "windows" then
 		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/opus/windows/lib32/libogg.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/opus/windows/lib32/libopus.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/opus/windows/lib32/libopusfile.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avcodec-57.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avdevice-57.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avfilter-6.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avformat-57.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avutil-55.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/postproc-54.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/swresample-2.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/swscale-4.dll"))
+
+		if config.ffmpeg.value then
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avcodec-57.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avdevice-57.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avfilter-6.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avformat-57.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/avutil-55.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/postproc-54.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/swresample-2.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib32/swscale-4.dll"))
+		end
 	else
 		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/freetype/windows/lib64/libfreetype.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/sdl/windows/lib64/SDL2.dll"))
@@ -168,18 +171,20 @@ if family == "windows" then
 		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/opus/windows/lib64/libogg.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/opus/windows/lib64/libopus.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/opus/windows/lib64/libopusfile.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avcodec-57.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avdevice-57.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avfilter-6.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avformat-57.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avutil-55.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/postproc-54.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/swresample-2.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/swscale-4.dll"))
+
+		if config.ffmpeg.value then
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avcodec-57.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avdevice-57.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avfilter-6.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avformat-57.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/avutil-55.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/postproc-54.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/swresample-2.dll"))
+			table.insert(client_depends, CopyToDirectory(".", "ddnet-libs/ffmpeg/windows/lib64/swscale-4.dll"))
+		end
 	end
 	table.insert(server_sql_depends, CopyToDirectory(".", "ddnet-libs/mysql/windows/mysqlcppconn.dll"))
 	table.insert(server_sql_depends, CopyToDirectory(".", "ddnet-libs/mysql/windows/libmysql.dll"))
-
 	client_link_other = {ResCompile("other/icons/DDNet.rc")}
 	server_link_other = {ResCompile("other/icons/DDNet-Server.rc")}
 end
@@ -358,8 +363,6 @@ function build(settings)
 	config.freetype:Apply(client_settings)
 	config.curl:Apply(client_settings)
 	config.opusfile:Apply(client_settings)
-	config.opus:Apply(client_settings)
-	config.ogg:Apply(client_settings)
 	config.ffmpeg:Apply(client_settings)
 	config.ffmpeg:Apply(engine_settings)
 
