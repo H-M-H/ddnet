@@ -18,7 +18,7 @@ Import("other/freetype.lua")
 Import("other/curl.lua")
 Import("other/opusfile.lua")
 Import("other/mysql.lua")
-Import("other/ffmpeg/ffmpeg.lua")
+Import("other/ffmpeg.lua")
 
 --- Setup Config -------
 config = NewConfig()

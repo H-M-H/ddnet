@@ -46,6 +46,7 @@ endif()
 
 option(WEBSOCKETS "Enable websockets support" OFF)
 option(MYSQL "Enable mysql support" OFF)
+option(FFMPEG "Enable video support via ffmpeg" OFF)
 option(CLIENT "Compile client" ON)
 option(DOWNLOAD_GTEST "Download and compile GTest" ${AUTO_DEPENDENCIES_DEFAULT})
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
@@ -133,6 +134,7 @@ find_package(Opus)
 find_package(Opusfile)
 find_package(PythonInterp)
 find_package(SDL2)
+find_package(ffmpeg)
 find_package(Threads)
 if(NOT PREFER_BUNDLED_LIBS)
   find_package(ZLIB)
@@ -428,6 +430,7 @@ set(COPY_FILES
   ${FREETYPE_COPY_FILES}
   ${OPUSFILE_COPY_FILES}
   ${SDL2_COPY_FILES}
+  ${FFMPEG_COPY_FILES}
 )
 file(COPY ${COPY_FILES} DESTINATION .)
 
@@ -549,6 +552,8 @@ set_glob(ENGINE_SHARED GLOB src/engine/shared
   storage.h
   uuid_manager.cpp
   uuid_manager.h
+  video.cpp
+  video.h
   websockets.cpp
   websockets.h
 )
@@ -659,6 +664,8 @@ if(CLIENT)
     text.cpp
     updater.cpp
     updater.h
+    video.cpp
+    video.h
   )
   set_glob(GAME_CLIENT GLOB_RECURSE src/game/client
     animstate.cpp
@@ -770,6 +777,7 @@ if(CLIENT)
     ${CURL_LIBRARIES}
     ${FREETYPE_LIBRARIES}
     ${SDL2_LIBRARIES}
+    ${FFMPEG_LIBRARIES}
 
     # Order of these three is important.
     ${OPUSFILE_LIBRARIES}
@@ -810,6 +818,7 @@ if(CLIENT)
     ${OPUSFILE_INCLUDE_DIRS}
     ${OPUS_INCLUDE_DIRS}
     ${SDL2_INCLUDE_DIRS}
+    ${FFMPEG_INCLUDE_DIRS}
   )
   list(APPEND TARGETS_OWN ${TARGET_CLIENT})
   list(APPEND TARGETS_LINK ${TARGET_CLIENT})
@@ -1322,6 +1331,9 @@ foreach(target ${TARGETS_OWN})
   target_compile_definitions(${target} PRIVATE GLEW_STATIC)
   if(WEBSOCKETS)
     target_compile_definitions(${target} PRIVATE CONF_WEBSOCKETS)
+  endif()
+  if(FFMPEG)
+    target_compile_definitions(${target} PRIVATE CONF_VIDEORECORDER)
   endif()
   if(MYSQL)
     target_compile_definitions(${target} PRIVATE CONF_SQL)
