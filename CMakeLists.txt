@@ -1167,7 +1167,6 @@ if(RPC)
   target_compile_definitions(${TARGET_SERVER} PRIVATE CONF_RPC)
   target_compile_definitions(engine-shared PRIVATE CONF_RPC)
   target_link_libraries(${TARGET_SERVER} gRPC::grpc++_reflection protobuf::libprotobuf)
-  set_property(TARGET ${TARGET_SERVER} PROPERTY CXX_STANDARD 14)
 endif()
 
 if(TARGET_OS AND TARGET_OS STREQUAL "mac")
