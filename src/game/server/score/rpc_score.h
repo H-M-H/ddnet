@@ -50,6 +50,15 @@ private:
 	IServer *Server() { return m_pServer; }
 	CDatabaseClient *RPC() {return m_pRPC; }
 
+	/* Take a callable without arguments returning a bool and add it to a
+	 * list of callables to be processed.
+	 *
+	 * The callables will be called each tick and removed from the list if
+	 * evaluating to true.
+	 * The idea is to use lambdas to capture the context after an RPC-Call,
+	 * especially the returned CFuture object, and if the future is ready
+	 * mutate the state of the game in the main thread.
+	 */
 	template<typename T>
 	void AddPendingRequest(T&& Func)
 	{

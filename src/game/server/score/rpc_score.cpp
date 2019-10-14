@@ -41,7 +41,12 @@ m_pRPC(m_pServer->RPC())
 
 }
 
-
+/* Call all the callables added via AddPendingRequest.
+ * Doing it like this has the nice property of automatically discarding
+ * all interactions with the GameContext if a new game is started i.e
+ * the map is changed as the livetime of CRPCScore is bound to it and
+ * PendingRequests live in CRPCScore.
+ */
 void CRPCScore::Process()
 {
 	m_PendingRequests.remove_if(
@@ -61,11 +66,12 @@ void CRPCScore::CheckBirthday(int ClientID)
 	std::string Name (Server()->ClientName(ClientID));
 	PlayerName->set_name(Name);
 	auto Fut = RPC()->CheckBirthDay(PlayerName);
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 	AddPendingRequest(
 	[this, ClientID, Name, Fut, JoinTime]()
 	{
-		if (Server()->ClientJoinTick(ClientID) != JoinTime)
+		// use JoinTime to check if we are still refering to the same client.
+		if (Server()->ClientJoinTime(ClientID) != JoinTime)
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -100,11 +106,11 @@ void CRPCScore::LoadScore(int ClientID)
 	PaM->set_player_name(PlayerName);
 	PaM->set_map_name(MapName);
 	auto Fut = RPC()->GetPlayerScore(PaM);
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 	AddPendingRequest(
 	[this, Fut, ClientID, JoinTime]()
 	{
-		if (Server()->ClientJoinTick(ClientID) != JoinTime)
+		if (Server()->ClientJoinTime(ClientID) != JoinTime)
 			return true;
 
 		if (!Fut.Ready())
@@ -143,11 +149,11 @@ void CRPCScore::MapInfo(int ClientID, const char* MapName)
 	std::string MapStr(MapName);
 	Map->set_name(MapStr);
 	auto Fut = RPC()->MapInfo(Map);
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 	AddPendingRequest(
 	[this, Fut, ClientID, MapStr, JoinTime]()
 	{
-		if (Server()->ClientJoinTick(ClientID) != JoinTime)
+		if (Server()->ClientJoinTime(ClientID) != JoinTime)
 			return true;
 		try
 		{
@@ -207,11 +213,11 @@ void CRPCScore::MapVote(std::shared_ptr<CMapVoteResult> *ppResult, int ClientID,
 	Map->set_name(MapName);
 	std::string MapStr(MapName);
 	auto Fut = RPC()->FindMap(Map);
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 	AddPendingRequest(
 	[this, Fut, ClientID, MapStr, JoinTime]()
 	{
-		if (Server()->ClientJoinTick(ClientID) != JoinTime)
+		if (Server()->ClientJoinTime(ClientID) != JoinTime)
 			return true;
 
 		if (!Fut.Ready())
@@ -250,7 +256,7 @@ void CRPCScore::OnFinish(unsigned int Size, int* pClientID, float Time, const ch
 
 	for (unsigned int i = 0; i < Size; ++i)
 	{
-		JoinTimes[pClientID[i]] = Server()->ClientJoinTick(pClientID[i]);
+		JoinTimes[pClientID[i]] = Server()->ClientJoinTime(pClientID[i]);
 		db::TeeFinish* Tee = Finish->add_tee_finished();
 		Tee->set_player_name(Server()->ClientName(pClientID[i]));
 
@@ -272,7 +278,7 @@ void CRPCScore::OnFinish(unsigned int Size, int* pClientID, float Time, const ch
 			{
 				if (JoinTimes.find(Msg.first) == JoinTimes.end())
 					continue;
-				if (Server()->ClientJoinTick(Msg.first) == JoinTimes.at(Msg.first))
+				if (Server()->ClientJoinTime(Msg.first) == JoinTimes.at(Msg.first))
 					GameServer()->SendChatTarget(Msg.first, Msg.second.c_str());
 			}
 		}
@@ -295,11 +301,11 @@ void CRPCScore::ShowRank(int ClientID, const char* pName, bool Search)
 	PaM->set_map_name(m_aMap);
 	PaM->set_player_name(pName);
 	auto Fut = RPC()->ShowRank(PaM);
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 	AddPendingRequest(
 	[this, Fut, ClientID, JoinTime, PlayerName, RequestingPlayerName]()
 	{
-		if (JoinTime != Server()->ClientJoinTick(ClientID))
+		if (JoinTime != Server()->ClientJoinTime(ClientID))
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -335,12 +341,12 @@ void CRPCScore::ShowTeamRank(int ClientID, const char* pName, bool Search)
 	PaM->set_player_name(pName);
 	std::string PlayerName(pName);
 	std::string RequestingPlayerName(Server()->ClientName(ClientID));
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 	auto Fut = RPC()->ShowTeamRank(PaM);
 	AddPendingRequest(
 	[this, Fut, RequestingPlayerName, ClientID, JoinTime]()
 	{
-		if (JoinTime != Server()->ClientJoinTick(ClientID))
+		if (JoinTime != Server()->ClientJoinTime(ClientID))
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -376,11 +382,11 @@ void CRPCScore::ShowTimes(int ClientID, const char* pName, int Debut)
 	PaM->set_map_name(m_aMap);
 	PaM->set_player_name(pName);
 	auto Fut = RPC()->ShowTimes(PaM);
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 	AddPendingRequest(
 	[this, Fut, ClientID, JoinTime]()
 	{
-		if (JoinTime != Server()->ClientJoinTick(ClientID))
+		if (JoinTime != Server()->ClientJoinTime(ClientID))
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -413,12 +419,12 @@ void CRPCScore::ShowTop5(IConsole::IResult *pResult, int ClientID, void *pUserDa
 	RankRequest->set_offset(Debut);
 	auto Fut = RPC()->ShowTop(RankRequest);
 
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 
 	AddPendingRequest(
 	[this, Fut, ClientID, JoinTime]()
 	{
-		if (JoinTime != Server()->ClientJoinTick(ClientID))
+		if (JoinTime != Server()->ClientJoinTime(ClientID))
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -444,12 +450,12 @@ void CRPCScore::ShowTeamTop5(IConsole::IResult *pResult, int ClientID, void *pUs
 	RankRequest->set_offset(Debut);
 	auto Fut = RPC()->ShowTop(RankRequest);
 
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 
 	AddPendingRequest(
 	[this, Fut, ClientID, JoinTime]()
 	{
-		if (JoinTime != Server()->ClientJoinTick(ClientID))
+		if (JoinTime != Server()->ClientJoinTime(ClientID))
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -473,12 +479,12 @@ void CRPCScore::ShowPoints(int ClientID, const char* pName, bool Search)
 	PlayerName->set_name(pName);
 	auto Fut = RPC()->ShowPoints(PlayerName);
 
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 
 	AddPendingRequest(
 	[this, Fut, ClientID, JoinTime]()
 	{
-		if (JoinTime != Server()->ClientJoinTick(ClientID))
+		if (JoinTime != Server()->ClientJoinTime(ClientID))
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -504,12 +510,12 @@ void CRPCScore::ShowTopPoints(IConsole::IResult *pResult, int ClientID, void *pU
 	TopRequest->set_offset(Debut);
 	auto Fut = RPC()->ShowTopPoints(TopRequest);
 
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 
 	AddPendingRequest(
 	[this, Fut, ClientID, JoinTime]()
 	{
-		if (JoinTime != Server()->ClientJoinTick(ClientID))
+		if (JoinTime != Server()->ClientJoinTime(ClientID))
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -536,12 +542,12 @@ void CRPCScore::RandomMap(std::shared_ptr<CRandomMapResult> *ppResult, int Clien
 	MapRequest->set_server_type(g_Config.m_SvServerType);
 	auto Fut = RPC()->GetRandomMap(MapRequest);
 
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 
 	AddPendingRequest(
 	[this, Fut, ClientID, JoinTime, MapRequest]()
 	{
-		if (JoinTime != Server()->ClientJoinTick(ClientID))
+		if (JoinTime != Server()->ClientJoinTime(ClientID))
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -556,7 +562,7 @@ void CRPCScore::RandomMap(std::shared_ptr<CRandomMapResult> *ppResult, int Clien
 			if (Ex.Status().error_code() == grpc::StatusCode::NOT_FOUND)
 			{
 				GameServer()->m_LastMapVote = 0;
-				if (JoinTime == Server()->ClientJoinTick(ClientID))
+				if (JoinTime == Server()->ClientJoinTime(ClientID))
 					GameServer()->SendChatTarget(ClientID, "No maps found on this server!");
 			}
 			else
@@ -577,12 +583,12 @@ void CRPCScore::RandomUnfinishedMap(std::shared_ptr<CRandomMapResult> *ppResult,
 	MapRequest->set_player_name(Server()->ClientName(ClientID));
 	auto Fut = RPC()->GetRandomUnfinishedMap(MapRequest);
 
-	int JoinTime = Server()->ClientJoinTick(ClientID);
+	int JoinTime = Server()->ClientJoinTime(ClientID);
 
 	AddPendingRequest(
 	[this, Fut, ClientID, JoinTime, MapRequest]()
 	{
-		if (JoinTime != Server()->ClientJoinTick(ClientID))
+		if (JoinTime != Server()->ClientJoinTime(ClientID))
 			return true;
 		if (!Fut.Ready())
 			return false;
@@ -597,7 +603,7 @@ void CRPCScore::RandomUnfinishedMap(std::shared_ptr<CRandomMapResult> *ppResult,
 			if (Ex.Status().error_code() == grpc::StatusCode::NOT_FOUND)
 			{
 				GameServer()->m_LastMapVote = 0;
-				if (JoinTime == Server()->ClientJoinTick(ClientID))
+				if (JoinTime == Server()->ClientJoinTime(ClientID))
 					GameServer()->SendChatTarget(ClientID, "You have no more unfinished maps on this server!");
 			}
 			else
@@ -656,7 +662,7 @@ void CRPCScore::SaveTeam(int Team, const char* Code, int ClientID, const char*)
 	for (int i = 0; i < SavedTeam.GetMembersCount(); ++i)
 	{
 		int ClientID = SavedTeam.m_pSavedTees[i].Character()->GetPlayer()->GetCID();
-		JoinTimes[ClientID] = Server()->ClientJoinTick(ClientID);
+		JoinTimes[ClientID] = Server()->ClientJoinTime(ClientID);
 	}
 
 	((CGameControllerDDRace*)(GameServer()->m_pController))->m_Teams.KillSavedTeam(Team);
@@ -670,7 +676,7 @@ void CRPCScore::SaveTeam(int Team, const char* Code, int ClientID, const char*)
 		{
 			std::string Msg = Fut.Get().text();
 			for (const auto& p : JoinTimes)
-				if (Server()->ClientJoinTick(p.first) == p.second)
+				if (Server()->ClientJoinTime(p.first) == p.second)
 					GameServer()->SendChatTarget(p.first, Msg.c_str());
 		}
 		catch (DatabaseException& Ex)

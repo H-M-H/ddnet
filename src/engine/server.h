@@ -38,7 +38,7 @@ public:
 	virtual const char *ClientName(int ClientID) = 0;
 	virtual const char *ClientClan(int ClientID) = 0;
 	virtual int ClientCountry(int ClientID) = 0;
-	virtual int ClientJoinTick(int ClientID) const = 0;
+	virtual int ClientJoinTime(int ClientID) const = 0;
 	virtual bool ClientIngame(int ClientID) = 0;
 	virtual bool ClientAuthed(int ClientID) = 0;
 	virtual int GetClientInfo(int ClientID, CClientInfo *pInfo) = 0;

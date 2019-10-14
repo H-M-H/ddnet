@@ -170,7 +170,7 @@ public:
 		int m_Authed;
 		int m_AuthKey;
 		int m_AuthTries;
-		int m_JoinTick;
+		int m_JoinTime;
 		int m_NextMapChunk;
 		int m_Flags;
 		bool m_ShowIps;
@@ -245,7 +245,7 @@ public:
 	virtual void SetClientName(int ClientID, const char *pName);
 	virtual void SetClientClan(int ClientID, char const *pClan);
 	virtual void SetClientCountry(int ClientID, int Country);
-	virtual int ClientJoinTick(int ClientID) const;
+	virtual int ClientJoinTime(int ClientID) const;
 	virtual void SetClientScore(int ClientID, int Score);
 	virtual void SetClientFlags(int ClientID, int Flags);
 
