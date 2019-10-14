@@ -1,7 +1,7 @@
 # RPC
 
 ## Overview
-DDNet-Servers are able to use googles grpc protocol via protobuf3 to communicate with a service that provides an interface to a database.
+DDNet-Servers are able to use googles [grpc](https://grpc.github.io/) protocol via protobuf3 to communicate with a service that provides an interface to a database.
 The motivation is to provide flexibility regarding the databasebackend and permit pretty much any database for storing and accessing ranks and saves.
 Additionally the output of commands like /top5 is easier to customize like this.
 
