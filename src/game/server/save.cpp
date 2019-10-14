@@ -6,7 +6,7 @@
 #include "./gamemodes/DDRace.h"
 #include <engine/shared/config.h>
 
-CSaveTee::CSaveTee()
+CSaveTee::CSaveTee() : m_pCharacter(nullptr)
 {
 }
 
@@ -16,6 +16,7 @@ CSaveTee::~CSaveTee()
 
 void CSaveTee::save(CCharacter *pChr)
 {
+	m_pCharacter = pChr;
 	str_copy(m_name, pChr->m_pPlayer->Server()->ClientName(pChr->m_pPlayer->GetCID()), sizeof(m_name));
 
 	m_Alive = pChr->m_Alive;
@@ -95,6 +96,7 @@ void CSaveTee::save(CCharacter *pChr)
 
 void CSaveTee::load(CCharacter *pChr, int Team)
 {
+	m_pCharacter = pChr;
 	pChr->m_pPlayer->Pause(m_Paused, true);
 
 	pChr->m_Alive = m_Alive;

@@ -13,8 +13,8 @@ class CSaveTee
 public:
 	CSaveTee();
 	~CSaveTee();
-	void save(CCharacter* pchr);
-	void load(CCharacter* pchr, int Team);
+	void save(CCharacter* pChr);
+	void load(CCharacter* pChr, int Team);
 	char* GetString();
 	int LoadString(char* String);
 #ifdef CONF_RPC
@@ -24,7 +24,10 @@ public:
 	vec2 GetPos() { return m_Pos; }
 	char* GetName() { return m_name; }
 
+	CCharacter* Character() { return m_pCharacter; }
+
 private:
+	CCharacter* m_pCharacter;
 
 	char m_String [2048];
 	char m_name [16];

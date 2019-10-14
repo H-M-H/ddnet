@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <forward_list>
 #include <functional>
 
 #include <engine/server.h>
@@ -53,13 +53,7 @@ private:
 	template<typename T>
 	void AddPendingRequest(T&& Func)
 	{
-		m_PendingRequests.emplace_back(std::forward<T>(Func));
-	}
-
-	template<typename T>
-	void AddGlobalPendingRequest(T&& Func)
-	{
-		ms_GlobalPendingRequests.emplace_back(std::forward<T>(Func));
+		m_PendingRequests.emplace_front(std::forward<T>(Func));
 	}
 
 	CGameContext *m_pGameServer;
@@ -68,8 +62,7 @@ private:
 	char m_aMap[64];
 	char m_aGameUuid[UUID_MAXSTRSIZE];
 
-	std::vector<std::function<bool()>> m_PendingRequests;
-	static std::vector<std::function<bool(CRPCScore*)>> ms_GlobalPendingRequests;
+	std::forward_list<std::function<bool()>> m_PendingRequests;
 
 	CDatabaseClient *m_pRPC;
 

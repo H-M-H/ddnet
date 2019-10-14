@@ -1,3 +1,8 @@
+#include <fstream>
+#include <google/protobuf/util/delimited_message_util.h>
+#include <base/system.h>
+#include <engine/shared/config.h>
+
 #include "database_client.h"
 
 using namespace db;
@@ -25,33 +30,48 @@ void CDatabaseClient::Run()
 {
 	while (m_Run)
 	{
-		std::function<void()> Func;
-		m_CallQueue.Consume([&Func](std::function<void()>& F) { Func = std::move(F); });
-		Func();
+		std::function<bool()> Func;
+		m_CallQueue.Consume([&Func](std::function<bool()>& F) { Func = std::move(F); });
+		if (!Func())
+			m_CallQueue.Emplace(Func);
 	}
 }
 
 ## for s, ms in Services
 ## for m, t in ms
-CFuture<{{t.Out}}> CDatabaseClient::{{m}}(const std::shared_ptr<{{t.In}}> Msg)
+CFuture<{{t.Out}}> CDatabaseClient::{{m}}(const std::shared_ptr<{{t.In}}> Msg, int64 TimeoutMilliseconds)
 {
-		std::shared_ptr<std::promise<{{t.Out}}>> Promise = std::make_shared<std::promise<{{t.Out}}>>();
-		m_CallQueue.Emplace([this, Promise, Msg]()
+	std::shared_ptr<std::promise<{{t.Out}}>> Promise = std::make_shared<std::promise<{{t.Out}}>>();
+	int64 Timeout = time_get_microseconds() + TimeoutMilliseconds * 1000;
+	m_CallQueue.Emplace([this, Promise, Msg, TimeoutMilliseconds, Timeout]()
+		{
+			grpc::ClientContext Context;
+			{{t.Out}} Out;
+			const grpc::Status Status = m_{{s}}Service->{{m}}(&Context, *Msg.get(), &Out);
+			if (Status.ok())
+				Promise->set_value(std::move(Out));
+			else if(m_Run && (TimeoutMilliseconds < 0 || time_get_microseconds() < Timeout) && Status.error_code() == grpc::StatusCode::UNAVAILABLE)
+			{
+				dbg_msg("rpc", "Failed to process RPC {{m}} (retrying): %s %s", Status.error_message().c_str(), Status.error_details().c_str());
+				return false;
+			}
+			else
+			{
+				Promise->set_exception(
+					std::make_exception_ptr(
+						DatabaseException("Failed to process RPC: {{m}}. " + Status.error_message() + " " + Status.error_details(), std::move(Status))
+					)
+				);
+				if (TimeoutMilliseconds < 0)
 				{
-						grpc::ClientContext Context;
-						{{t.Out}} Out;
-						const grpc::Status Status = m_{{s}}Service->{{m}}(&Context, *Msg.get(), &Out);
-						if (Status.ok())
-								Promise->set_value(std::move(Out));
-						else
-								Promise->set_exception(
-									std::make_exception_ptr(
-										DatabaseException("Failed to process RPC: {{m}}. " + Status.error_message() + " " + Status.error_details(), std::move(Status))
-									)
-								);
+					std::ofstream File(g_Config.m_SvRPCFailureFile, std::ofstream::app);
+					google::protobuf::util::SerializeDelimitedToOstream(*Msg.get(), &File);
 				}
-		);
-		return CFuture<{{t.Out}}>(Promise->get_future());
+			}
+			return true;
+		}
+	);
+	return CFuture<{{t.Out}}>(Promise->get_future());
 }
 ## endfor
 ## endfor
@@ -61,7 +81,7 @@ CDatabaseClient::~CDatabaseClient()
 {
 	m_Run = false;
 	for (size_t i = 0; i < m_RPCThreads.size(); ++i)
-		m_CallQueue.Emplace([]() {});
+		m_CallQueue.Emplace([]() {return true;});
 	for (std::thread& Thread : m_RPCThreads)
 		Thread.join();
 }

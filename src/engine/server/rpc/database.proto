@@ -22,6 +22,11 @@ service Database {
 	rpc GetRandomUnfinishedMap(RandomUnfinishedMapRequest) returns (MapName);
 	rpc SaveTeam(TeamSave) returns (Message);
 	rpc LoadTeam(TeamLoadRequest) returns (TeamSave);
+	rpc LoadingTeamDone(TeamLoadRequest) returns (Empty);
+}
+
+message Empty
+{
 }
 
 message Message {

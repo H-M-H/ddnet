@@ -1,8 +1,5 @@
 #ifdef CONF_RPC
 
-#include <fstream>
-#include <google/protobuf/util/delimited_message_util.h>
-
 #include <base/math.h>
 #include <engine/shared/config.h>
 #include "../gamemodes/DDRace.h"
@@ -11,8 +8,6 @@
 
 #include "rpc_score.h"
 
-
-std::vector<std::function<bool(CRPCScore*)>> CRPCScore::ms_GlobalPendingRequests;
 
 CRPCScore::CRPCScore(CGameContext* pGameServer) :
 m_pGameServer(pGameServer),
@@ -49,24 +44,14 @@ m_pRPC(m_pServer->RPC())
 
 void CRPCScore::Process()
 {
-	for (size_t i = 0; i < ms_GlobalPendingRequests.size(); ++i)
-	{
-		if (ms_GlobalPendingRequests[i](this))
-			ms_GlobalPendingRequests.erase(ms_GlobalPendingRequests.begin() + i);
-	}
-
-	for (size_t i = 0; i < m_PendingRequests.size(); ++i)
-	{
-		if (m_PendingRequests[i]())
-			m_PendingRequests.erase(m_PendingRequests.begin() + i);
-	}
+	m_PendingRequests.remove_if(
+		[](const std::function<bool()>& Func){ return Func(); }
+	);
 }
 
 
 void CRPCScore::OnShutdown()
 {
-	for (size_t i = 0; i < ms_GlobalPendingRequests.size(); ++i)
-		ms_GlobalPendingRequests[i](nullptr);
 }
 
 
@@ -269,10 +254,10 @@ void CRPCScore::OnFinish(unsigned int Size, int* pClientID, float Time, const ch
 		db::TeeFinish* Tee = Finish->add_tee_finished();
 		Tee->set_player_name(Server()->ClientName(pClientID[i]));
 
-		for(int j = 0; j < NUM_CHECKPOINTS; j++)
+		for (int j = 0; j < NUM_CHECKPOINTS; j++)
 			Tee->set_check_point(j, apCpTime[i][j]);
 	}
-	auto Fut = RPC()->OnFinish(Finish);
+	auto Fut = RPC()->OnFinish(Finish, -1);
 	AddPendingRequest(
 	[this, Fut, Finish, JoinTimes]()
 	{
@@ -624,7 +609,7 @@ void CRPCScore::RandomUnfinishedMap(std::shared_ptr<CRandomMapResult> *ppResult,
 }
 
 
-void CRPCScore::SaveTeam(int Team, const char* Code, int ClientID, const char* Server)
+void CRPCScore::SaveTeam(int Team, const char* Code, int ClientID, const char*)
 {
 	int Num = -1;
 
@@ -666,41 +651,31 @@ void CRPCScore::SaveTeam(int Team, const char* Code, int ClientID, const char* S
 	SaveProtobuf->set_code(Code);
 	SaveProtobuf->set_map_name(m_aMap);
 	SavedTeam.FillProtobuf(*SaveProtobuf);
-	((CGameControllerDDRace*)(GameServer()->m_pController))->m_Teams.KillSavedTeam(Team);
 
-	auto Fut = RPC()->SaveTeam(SaveProtobuf);
-	CUuid GameUUID = GameServer()->GameUuid();
-	AddGlobalPendingRequest(
-	[Fut, Team, SaveProtobuf, GameUUID](CRPCScore* pScore)
+	std::map<int, int> JoinTimes;
+	for (int i = 0; i < SavedTeam.GetMembersCount(); ++i)
 	{
-		if (pScore == nullptr)
-		{
-			try
-			{
-				Fut.Get();
-			}
-			catch (DatabaseException& Ex)
-			{
-				std::ofstream File(g_Config.m_SvRPCFailureFile, std::ofstream::app);
-				google::protobuf::util::SerializeDelimitedToOstream(*SaveProtobuf, &File);
-			}
-			return true;
-		}
+		int ClientID = SavedTeam.m_pSavedTees[i].Character()->GetPlayer()->GetCID();
+		JoinTimes[ClientID] = Server()->ClientJoinTick(ClientID);
+	}
 
+	((CGameControllerDDRace*)(GameServer()->m_pController))->m_Teams.KillSavedTeam(Team);
+	auto Fut = RPC()->SaveTeam(SaveProtobuf, -1);
+	AddPendingRequest(
+	[this, Fut, JoinTimes]()
+	{
 		if (!Fut.Ready())
 			return false;
 		try
 		{
 			std::string Msg = Fut.Get().text();
-			// TODO: Jointicks...
-			if (GameUUID == pScore->GameServer()->GameUuid())
-				pScore->GameServer()->SendChatTeam(Team, Fut.Get().text().c_str());
+			for (const auto& p : JoinTimes)
+				if (Server()->ClientJoinTick(p.first) == p.second)
+					GameServer()->SendChatTarget(p.first, Msg.c_str());
 		}
 		catch (DatabaseException& Ex)
 		{
 			dbg_msg("rpcscore", "%s", Ex.what());
-			std::ofstream File(g_Config.m_SvRPCFailureFile, std::ofstream::app);
-			google::protobuf::util::SerializeDelimitedToOstream(*SaveProtobuf, &File);
 		}
 
 		return true;
@@ -715,126 +690,75 @@ void CRPCScore::LoadTeam(const char* Code, int ClientID)
 	LoadRequest->set_code(Code);
 	LoadRequest->set_map_name(m_aMap);
 	auto Fut = RPC()->LoadTeam(LoadRequest);
-	CUuid GameUUID = GameServer()->GameUuid();
-	AddGlobalPendingRequest(
-	[Fut, ClientID, GameUUID](CRPCScore* pScore)
+	AddPendingRequest(
+	[this, Fut, ClientID, LoadRequest]()
 	{
-		if (pScore == nullptr)
-		{
-			try
-			{
-				auto Save = Fut.Get();
-				std::ofstream File(g_Config.m_SvRPCFailureFile, std::ofstream::app);
-				google::protobuf::util::SerializeDelimitedToOstream(Save, &File);
-			}
-			catch (DatabaseException& Ex)
-			{
-				dbg_msg("rpcscore", "%s", Ex.what());
-			}
-			return true;
-		}
-
 		if (!Fut.Ready())
 			return false;
-
-		if (GameUUID != pScore->GameServer()->GameUuid())
-		{
-			auto Save = std::make_shared<db::TeamSave>(Fut.Get());
-			auto Fut2 = pScore->RPC()->SaveTeam(Save);
-			pScore->AddGlobalPendingRequest(
-			[Fut2, Save](CRPCScore* pScore)
-			{
-				if (pScore == nullptr)
-				{
-					try
-					{
-						Fut2.Get();
-					}
-					catch (DatabaseException& Ex)
-					{
-						std::ofstream File(g_Config.m_SvRPCFailureFile, std::ofstream::app);
-						google::protobuf::util::SerializeDelimitedToOstream(*Save, &File);
-					}
-					return true;
-				}
-
-				if (!Fut2.Ready())
-					return false;
-				try
-				{
-					std::string Msg = Fut2.Get().text();
-					// TODO: Jointicks...
-				}
-				catch (DatabaseException& Ex)
-				{
-					dbg_msg("rpcscore", "%s", Ex.what());
-				}
-
-				return true;
-			}
-			);
-		}
 
 		try
 		{
 			auto TeamSave = Fut.Get();
 
-			CSaveTeam SavedTeam(pScore->GameServer()->m_pController);
+			CSaveTeam SavedTeam(GameServer()->m_pController);
 
 			int Num = SavedTeam.LoadProtobuf(TeamSave);
 
 			if(Num)
-				pScore->GameServer()->SendChatTarget(ClientID, "Unable to load savegame: data corrupted");
+				GameServer()->SendChatTarget(ClientID, "Unable to load savegame: data corrupted");
 			else
 			{
 
 				bool Found = false;
 				for (int i = 0; i < SavedTeam.GetMembersCount(); i++)
 				{
-					if(str_comp(SavedTeam.m_pSavedTees[i].GetName(), pScore->Server()->ClientName(ClientID)) == 0)
+					if(str_comp(SavedTeam.m_pSavedTees[i].GetName(), Server()->ClientName(ClientID)) == 0)
 					{
 						Found = true;
 						break;
 					}
 				}
 				if(!Found)
-					pScore->GameServer()->SendChatTarget(ClientID, "You don't belong to this team");
+					GameServer()->SendChatTarget(ClientID, "You don't belong to this team");
 				else
 				{
-					int Team = ((CGameControllerDDRace*)(pScore->GameServer()->m_pController))->m_Teams.m_Core.Team(ClientID);
+					int Team = ((CGameControllerDDRace*)(GameServer()->m_pController))->m_Teams.m_Core.Team(ClientID);
 
 					Num = SavedTeam.load(Team);
 
 					if(Num == 1)
 					{
-						pScore->GameServer()->SendChatTarget(ClientID, "You have to be in a team (from 1-63)");
+						GameServer()->SendChatTarget(ClientID, "You have to be in a team (from 1-63)");
 					}
 					else if(Num == 2)
 					{
 						char aBuf[256];
 						str_format(aBuf, sizeof(aBuf), "Too many players in this team, should be %d", SavedTeam.GetMembersCount());
-						pScore->GameServer()->SendChatTarget(ClientID, aBuf);
+						GameServer()->SendChatTarget(ClientID, aBuf);
 					}
 					else if(Num >= 10 && Num < 100)
 					{
 						char aBuf[256];
 						str_format(aBuf, sizeof(aBuf), "Unable to find player: '%s'", SavedTeam.m_pSavedTees[Num-10].GetName());
-						pScore->GameServer()->SendChatTarget(ClientID, aBuf);
+						GameServer()->SendChatTarget(ClientID, aBuf);
 					}
 					else if(Num >= 100 && Num < 200)
 					{
 						char aBuf[256];
 						str_format(aBuf, sizeof(aBuf), "%s is racing right now, Team can't be loaded if a Tee is racing already", SavedTeam.m_pSavedTees[Num-100].GetName());
-						pScore->GameServer()->SendChatTarget(ClientID, aBuf);
+						GameServer()->SendChatTarget(ClientID, aBuf);
 					}
 					else if(Num >= 200)
 					{
 						char aBuf[256];
 						str_format(aBuf, sizeof(aBuf), "Everyone has to be in a team, %s is in team 0 or the wrong team", SavedTeam.m_pSavedTees[Num-200].GetName());
-						pScore->GameServer()->SendChatTarget(ClientID, aBuf);
+						GameServer()->SendChatTarget(ClientID, aBuf);
 					}
 					else
-						pScore->GameServer()->SendChatTeam(Team, "Loading successfully done");
+					{
+						RPC()->LoadingTeamDone(LoadRequest, -1);
+						GameServer()->SendChatTeam(Team, "Loading successfully done");
+					}
 				}
 			}
 		}

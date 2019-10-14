@@ -34,7 +34,7 @@ public:
 
 ## for s, ms in Services
 ## for m, t in ms
-	CFuture<db::{{t.Out}}> {{m}}(const std::shared_ptr<db::{{t.In}}> Msg);
+	CFuture<db::{{t.Out}}> {{m}}(const std::shared_ptr<db::{{t.In}}> Msg, int64 TimeoutMilliseconds=20000);
 ## endfor
 ## endfor
 
@@ -43,7 +43,7 @@ private:
 
 	std::atomic_bool m_Run;
 	std::shared_ptr<grpc::Channel> m_Channel;
-	CQueue<std::function<void()>> m_CallQueue;
+	CQueue<std::function<bool()>> m_CallQueue;
 
 ## for s, ms in Services
 	std::unique_ptr<db::{{s}}::Stub> m_{{s}}Service;
