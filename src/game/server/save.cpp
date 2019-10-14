@@ -208,19 +208,173 @@ int CSaveTee::LoadString(char* String)
 	}
 }
 
+#ifdef CONF_RPC
+
+void CSaveTee::FillProtobuf(db::TeeSave& Save)
+{
+	Save.set_name(m_name);
+	Save.set_alive(m_Alive);
+	Save.set_paused(m_Paused);
+	Save.set_needed_faketuning(m_NeededFaketuning);
+	Save.set_tee_finished(m_TeeFinished);
+	Save.set_is_solo(m_IsSolo);
+	for (int i = 0; i <= 5; i++)
+	{
+		db::WeaponStat& WS = *Save.add_weapon_stat();
+		WS.set_ammo_regen_start(m_aWeapons[0].m_AmmoRegenStart);
+		WS.set_ammo(m_aWeapons[0].m_Ammo);
+		WS.set_ammo_cost(m_aWeapons[0].m_Ammocost);
+		WS.set_got(m_aWeapons[0].m_Got);
+	}
+	Save.set_last_weapon(m_LastWeapon);
+	Save.set_queued_weapon(m_QueuedWeapon);
+	Save.set_super_jump(m_SuperJump);
+	Save.set_jetpack(m_Jetpack);
+	Save.set_ninja_jetpack(m_NinjaJetpack);
+	Save.set_freeze_time(m_FreezeTime);
+	Save.set_freeze_tick(m_FreezeTick);
+	Save.set_deep_freeze(m_DeepFreeze);
+	Save.set_endless_hook(m_EndlessHook);
+	Save.set_ddrace_state(m_DDRaceState);
+	Save.set_hit(m_Hit);
+	Save.set_collision(m_Collision);
+	Save.set_tune_zone(m_TuneZone);
+	Save.set_tune_zone_old(m_TuneZoneOld);
+	Save.set_hook(m_Hook);
+	Save.set_time(m_Time);
+	Save.set_allocated_pos(new db::Vec2);
+	Save.mutable_pos()->set_x((int)m_Pos.x);
+	Save.mutable_pos()->set_y((int)m_Pos.y);
+	Save.set_allocated_prev_pos(new db::Vec2);
+	Save.mutable_prev_pos()->set_x((int)m_PrevPos.x);
+	Save.mutable_prev_pos()->set_y((int)m_PrevPos.y);
+	Save.set_tele_checkpoint(m_TeleCheckpoint);
+	Save.set_last_penalty(m_LastPenalty);
+	Save.set_allocated_core_pos(new db::Vec2);
+	Save.mutable_core_pos()->set_x((int)m_CorePos.x);
+	Save.mutable_core_pos()->set_y((int)m_CorePos.y);
+	Save.set_allocated_vel(new db::Vec2);
+	Save.mutable_vel()->set_x(m_Vel.x);
+	Save.mutable_vel()->set_y(m_Vel.y);
+	Save.set_active_weapon(m_ActiveWeapon);
+	Save.set_jumped(m_Jumped);
+	Save.set_jumped_total(m_JumpedTotal);
+	Save.set_jumps(m_Jumps);
+	Save.set_allocated_hook_pos(new db::Vec2);
+	Save.mutable_hook_pos()->set_x((int)m_HookPos.x);
+	Save.mutable_hook_pos()->set_y((int)m_HookPos.y);
+	Save.set_allocated_hook_dir(new db::Vec2);
+	Save.mutable_hook_dir()->set_x(m_HookDir.x);
+	Save.mutable_hook_dir()->set_y(m_HookDir.y);
+	Save.set_allocated_hook_telebase(new db::Vec2);
+	Save.mutable_hook_telebase()->set_x((int)m_HookTeleBase.x);
+	Save.mutable_hook_telebase()->set_y((int)m_HookTeleBase.y);
+	Save.set_hook_tick(m_HookTick);
+	Save.set_hook_state(m_HookState);
+	Save.set_cp_time(m_CpTime);
+	Save.set_cp_active(m_CpActive);
+	Save.set_cp_last_broadcast(m_CpLastBroadcast);
+	for (int i = 0; i < 25; i++)
+		Save.add_cp_current(m_CpCurrent[i]);
+	Save.set_not_eligible_for_finish(m_NotEligibleForFinish);
+	Save.set_has_tele_gun(m_HasTelegunGun);
+	Save.set_has_tele_laser(m_HasTelegunLaser);
+	Save.set_has_tele_grenade(m_HasTelegunGrenade);
+	Save.set_game_uuid(aGameUuid);
+}
+
+
+int CSaveTee::LoadProtobuf(const db::TeeSave& Save)
+{
+	if (Save.weapon_stat_size() != 6)
+	{
+		dbg_msg("load", "faild to load Weaponstats, got info for %d instead of 6.", Save.weapon_stat_size());
+		return 1;
+	}
+	if (Save.cp_current_size() > 25)
+	{
+		dbg_msg("load", "faild to load checkpointtimes, got more than 25 (%d).", Save.cp_current_size());
+		return 2;
+	}
+	str_copy(m_name, Save.name().c_str(), sizeof(m_name));
+	m_Alive = Save.alive();
+	m_Paused = Save.paused();
+	m_NeededFaketuning = Save.needed_faketuning();
+	m_TeeFinished = Save.tee_finished();
+	m_IsSolo = Save.is_solo();
+	for (int i = 0; i <= 5; i++)
+	{
+		m_aWeapons[i].m_AmmoRegenStart = Save.weapon_stat(i).ammo_regen_start();
+		m_aWeapons[i].m_Ammo = Save.weapon_stat(i).ammo();
+		m_aWeapons[i].m_Ammocost = Save.weapon_stat(i).ammo_cost();
+		m_aWeapons[i].m_Got = Save.weapon_stat(i).ammo_cost();
+	}
+	m_LastWeapon = Save.last_weapon();
+	m_QueuedWeapon = Save.queued_weapon();
+	m_SuperJump = Save.super_jump();
+	m_Jetpack = Save.jetpack();
+	m_NinjaJetpack = Save.ninja_jetpack();
+	m_FreezeTime = Save.freeze_time();
+	m_FreezeTick = Save.freeze_tick();
+	m_DeepFreeze = Save.deep_freeze();
+	m_EndlessHook = Save.endless_hook();
+	m_DDRaceState = Save.ddrace_state();
+	m_Hit = Save.hit();
+	m_Collision = Save.collision();
+	m_TuneZone = Save.tune_zone();
+	m_TuneZoneOld = Save.tune_zone_old();
+	m_Hook = Save.hook();
+	m_Time = Save.time();
+	m_Pos.x = Save.pos().x();
+	m_Pos.y = Save.pos().y();
+	m_PrevPos.x = Save.prev_pos().x();
+	m_PrevPos.y = Save.prev_pos().y();
+	m_TeleCheckpoint = Save.tele_checkpoint();
+	m_LastPenalty = Save.last_penalty();
+	m_CorePos.x = Save.core_pos().x();
+	m_CorePos.y = Save.core_pos().y();
+	m_Vel.x = Save.vel().x();
+	m_Vel.y = Save.vel().y();
+	m_ActiveWeapon = Save.active_weapon();
+	m_Jumped = Save.jumped();
+	m_JumpedTotal = Save.jumped_total();
+	m_Jumps = Save.jumps();
+	m_HookPos.x = Save.hook_pos().x();
+	m_HookPos.y = Save.hook_pos().y();
+	m_HookDir.x = Save.hook_dir().x();
+	m_HookDir.y = Save.hook_dir().y();
+	m_HookTeleBase.x = Save.hook_telebase().x();
+	m_HookTeleBase.y = Save.hook_telebase().y();
+	m_HookTick = Save.hook_tick();
+	m_HookState = Save.hook_state();
+	m_CpTime = Save.cp_time();
+	m_CpActive = Save.cp_active();
+	m_CpLastBroadcast = Save.cp_last_broadcast();
+	for (int i = 0; i < Save.cp_current_size(); i++)
+	{
+		m_CpCurrent[i] = Save.cp_current(i);
+	}
+	m_NotEligibleForFinish = Save.not_eligible_for_finish();
+	m_HasTelegunGun = Save.has_tele_gun();
+	m_HasTelegunLaser = Save.has_tele_laser();
+	m_HasTelegunGrenade = Save.has_tele_grenade();
+	return 0;
+}
+#endif
+
 CSaveTeam::CSaveTeam(IGameController* Controller)
 {
 	m_pController = Controller;
 	m_Switchers = 0;
-	SavedTees = 0;
+	m_pSavedTees = 0;
 }
 
 CSaveTeam::~CSaveTeam()
 {
 	if(m_Switchers)
 		delete[] m_Switchers;
-	if(SavedTees)
-		delete[] SavedTees;
+	if(m_pSavedTees)
+		delete[] m_pSavedTees;
 }
 
 int CSaveTeam::save(int Team)
@@ -245,14 +399,14 @@ int CSaveTeam::save(int Team)
 		m_NumSwitchers = m_pController->GameServer()->Collision()->m_NumSwitchers;
 		m_TeamLocked = Teams->TeamLocked(Team);
 
-		SavedTees = new CSaveTee[m_MembersCount];
+		m_pSavedTees = new CSaveTee[m_MembersCount];
 		int j = 0;
 		for (int i = 0; i < MAX_CLIENTS; i++)
 		{
 			if(Teams->m_Core.Team(i) == Team)
 			{
 				if(m_pController->GameServer()->m_apPlayers[i] && m_pController->GameServer()->m_apPlayers[i]->GetCharacter())
-					SavedTees[j].save(m_pController->GameServer()->m_apPlayers[i]->GetCharacter());
+					m_pSavedTees[j].save(m_pController->GameServer()->m_apPlayers[i]->GetCharacter());
 				else
 					return 3;
 				j++;
@@ -293,7 +447,7 @@ int CSaveTeam::load(int Team)
 
 	for (int i = 0; i < m_MembersCount; i++)
 	{
-		int ID = MatchPlayer(SavedTees[i].GetName());
+		int ID = MatchPlayer(m_pSavedTees[i].GetName());
 		if(ID == -1) // first check if team can be loaded / do not load half teams
 		{
 			return i+10; // +10 to leave space for other return-values
@@ -313,10 +467,10 @@ int CSaveTeam::load(int Team)
 
 	for (int i = 0; i < m_MembersCount; i++)
 	{
-		pChr = MatchCharacter(SavedTees[i].GetName(), i);
+		pChr = MatchCharacter(m_pSavedTees[i].GetName(), i);
 		if(pChr)
 		{
-			SavedTees[i].load(pChr, Team);
+			m_pSavedTees[i].load(pChr, Team);
 		}
 	}
 
@@ -351,7 +505,7 @@ CCharacter* CSaveTeam::MatchCharacter(char name[16], int SaveID)
 		if(m_pController->GameServer()->m_apPlayers[ID]->GetCharacter())
 			return m_pController->GameServer()->m_apPlayers[ID]->GetCharacter();
 		else
-			return m_pController->GameServer()->m_apPlayers[ID]->ForceSpawn(SavedTees[SaveID].GetPos());
+			return m_pController->GameServer()->m_apPlayers[ID]->ForceSpawn(m_pSavedTees[SaveID].GetPos());
 	}
 
 	return 0;
@@ -364,7 +518,7 @@ char* CSaveTeam::GetString()
 	for (int i = 0; i<m_MembersCount; i++)
 	{
 		char aBuf[1024];
-		str_format(aBuf, sizeof(aBuf), "\n%s", SavedTees[i].GetString());
+		str_format(aBuf, sizeof(aBuf), "\n%s", m_pSavedTees[i].GetString());
 		str_append(m_String, aBuf, sizeof(m_String));
 	}
 
@@ -428,14 +582,14 @@ int CSaveTeam::LoadString(const char* String)
 		return 1;
 	}
 
-	if(SavedTees)
+	if(m_pSavedTees)
 	{
-		delete [] SavedTees;
-		SavedTees = 0;
+		delete [] m_pSavedTees;
+		m_pSavedTees = 0;
 	}
 
 	if(m_MembersCount)
-		SavedTees = new CSaveTee[m_MembersCount];
+		m_pSavedTees = new CSaveTee[m_MembersCount];
 
 	for (int n = 0; n < m_MembersCount; n++)
 	{
@@ -459,7 +613,7 @@ int CSaveTeam::LoadString(const char* String)
 		if(StrSize < sizeof(SaveTee))
 		{
 			str_copy(SaveTee, CopyPos, StrSize);
-			int Num = SavedTees[n].LoadString(SaveTee);
+			int Num = m_pSavedTees[n].LoadString(SaveTee);
 			if(Num)
 			{
 				dbg_msg("load", "failed to load tee");
@@ -521,3 +675,73 @@ int CSaveTeam::LoadString(const char* String)
 
 	return 0;
 }
+
+#ifdef CONF_RPC
+
+void CSaveTeam::FillProtobuf(db::TeamSave& Save)
+{
+	Save.set_team_state(m_TeamState);
+	Save.set_team_locked(m_TeamLocked);
+
+	for (int i = 0; i < m_MembersCount; i++)
+	{
+		Save.add_tee();
+		m_pSavedTees[i].FillProtobuf(*Save.mutable_tee(i));
+	}
+
+	if(m_NumSwitchers && m_Switchers)
+		for(int i = 1; i < m_NumSwitchers + 1; i++)
+		{
+			Save.add_switch_();
+			Save.mutable_switch_(i-1)->set_status(m_Switchers[i].m_Status);
+			Save.mutable_switch_(i-1)->set_end_time(m_Switchers[i].m_EndTime);
+			Save.mutable_switch_(i-1)->set_type(m_Switchers[i].m_Type);
+		}
+
+}
+
+
+int CSaveTeam::LoadProtobuf(const db::TeamSave& Save)
+{
+	m_TeamState = Save.team_state();
+	m_MembersCount = Save.tee_size();
+	m_NumSwitchers = Save.switch__size() - 1;
+	m_TeamLocked = Save.team_locked();
+
+	if(m_pSavedTees)
+	{
+		delete [] m_pSavedTees;
+		m_pSavedTees = nullptr;
+	}
+
+	if (m_MembersCount > MAX_CLIENTS)
+		return m_MembersCount;
+
+	if(m_MembersCount)
+		m_pSavedTees = new CSaveTee[m_MembersCount];
+	for (int i = 0; i < m_MembersCount; i++)
+	{
+		int Ret = m_pSavedTees[i].LoadProtobuf(Save.tee(i));
+		if (Ret != 0)
+			return Ret;
+	}
+
+
+	if(m_Switchers)
+	{
+		delete [] m_Switchers;
+		m_Switchers = nullptr;
+	}
+
+	if(m_NumSwitchers)
+		m_Switchers = new SSimpleSwitchers[m_NumSwitchers+1];
+	for (int i = 1; i < m_NumSwitchers + 1; i++)
+	{
+		m_Switchers[i].m_Status = Save.switch_(i-1).status() ;
+		m_Switchers[i].m_EndTime = Save.switch_(i-1).end_time() ;
+		m_Switchers[i].m_Type   = Save.switch_(i-1).type() ;
+	}
+	return 0;
+}
+
+#endif

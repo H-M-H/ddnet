@@ -17,8 +17,8 @@ struct CUuid
 {
 	unsigned char m_aData[16];
 
-	bool operator==(const CUuid &Other);
-	bool operator!=(const CUuid &Other);
+	bool operator==(const CUuid &Other) const;
+	bool operator!=(const CUuid &Other) const;
 };
 
 CUuid RandomUuid();

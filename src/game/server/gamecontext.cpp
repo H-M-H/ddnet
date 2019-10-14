@@ -20,6 +20,9 @@
 #include "gamemodes/DDRace.h"
 #include "score.h"
 #include "score/file_score.h"
+#if defined(CONF_RPC)
+#include "score/rpc_score.h"
+#endif
 #if defined(CONF_SQL)
 #include "score/sql_score.h"
 #endif
@@ -447,6 +450,22 @@ void CGameContext::StartVote(const char *pDesc, const char *pCommand, const char
 	m_VoteUpdate = true;
 }
 
+void CGameContext::StartMapVote(const char* pMapName, const char* pServerType, int ClientID)
+{
+	m_VoteKick = false;
+	m_VoteSpec = false;
+	m_LastMapVote = time_get();
+
+	char aCmd[256];
+	std::string ServerType(pServerType);
+	std::transform(ServerType.begin(), ServerType.end(), ServerType.begin(), [](unsigned char c) { return std::tolower(c); });
+	str_format(aCmd, sizeof(aCmd), "sv_reset_file types/%s/flexreset.cfg; change_map \"%s\"", ServerType.c_str(), pMapName);
+
+	char aChatmsg[512];
+	str_format(aChatmsg, sizeof(aChatmsg), "'%s' called vote to change server option '%s' (%s)", Server()->ClientName(ClientID), pMapName, "/map");
+
+	CallVote(ClientID, pMapName, aCmd, "/map", aChatmsg);
+}
 
 void CGameContext::EndVote()
 {
@@ -621,6 +640,8 @@ void CGameContext::OnTick()
 		m_TeeHistorian.BeginTick(Server()->Tick());
 		m_TeeHistorian.BeginPlayers();
 	}
+
+	m_pScore->Process();
 
 	// copy tuning
 	m_World.m_Core.m_Tuning[0] = m_Tuning;
@@ -2728,12 +2749,23 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	if(m_pScore)
 		delete m_pScore;
 
-	// create score object (add sql later)
-#if defined(CONF_SQL)
-	if(g_Config.m_SvUseSQL)
-		m_pScore = new CSqlScore(this);
-	else
+	// create score object
+	bool ScoreCreated = false;
+#ifdef CONF_RPC
+	if(str_length(g_Config.m_SvRPCAddress) != 0)
+	{
+		m_pScore = new CRPCScore(this);
+		ScoreCreated = true;
+	}
 #endif
+#ifdef CONF_SQL
+	if(g_Config.m_SvUseSQL)
+	{
+		m_pScore = new CSqlScore(this);
+		ScoreCreated = true;
+	}
+#endif
+	if (!ScoreCreated)
 		m_pScore = new CFileScore(this);
 	// setup core world
 	//for(int i = 0; i < MAX_CLIENTS; i++)

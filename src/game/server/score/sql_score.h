@@ -210,6 +210,8 @@ public:
 	virtual void SaveTeam(int Team, const char* Code, int ClientID, const char* Server);
 	virtual void LoadTeam(const char* Code, int ClientID);
 
+	virtual void Process();
+
 	virtual void OnShutdown();
 };
 

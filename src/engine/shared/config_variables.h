@@ -218,7 +218,10 @@ MACRO_CONFIG_INT(SvSaveGamesDelay, sv_savegames_delay, 60, 0, 10000, CFGFLAG_SER
 MACRO_CONFIG_STR(SvSqlFailureFile, sv_sql_failure_file, 64, "failed_sql.sql", CFGFLAG_SERVER, "File to store failed Sql-Inserts (ranks)")
 MACRO_CONFIG_INT(SvSqlQueriesDelay, sv_sql_queries_delay, 1, 0, 20, CFGFLAG_SERVER, "Delay in seconds between SQL queries of a single player")
 #endif
-
+#ifdef CONF_RPC
+MACRO_CONFIG_STR(SvRPCAddress, sv_rpc_addr, 128, "localhost:50051", CFGFLAG_SERVER, "RPC-Server to connect to (used for database access)")
+MACRO_CONFIG_STR(SvRPCFailureFile, sv_rpc_failure_file, 64, "failed_rpc.protobuf", CFGFLAG_SERVER, "File to store failed RPCCalls")
+#endif
 MACRO_CONFIG_INT(SvDDRaceRules, sv_ddrace_rules, 1, 0, 1, CFGFLAG_SERVER, "Whether the default mod rules are displayed or not")
 MACRO_CONFIG_STR(SvRulesLine1, sv_rules_line1, 128, "", CFGFLAG_SERVER, "Rules line 1")
 MACRO_CONFIG_STR(SvRulesLine2, sv_rules_line2, 128, "", CFGFLAG_SERVER, "Rules line 2")

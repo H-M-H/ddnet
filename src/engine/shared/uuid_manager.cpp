@@ -55,12 +55,12 @@ void FormatUuid(CUuid Uuid, char *pBuffer, unsigned BufferLength)
 		p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
 }
 
-bool CUuid::operator==(const CUuid& Other)
+bool CUuid::operator==(const CUuid& Other) const
 {
 	return mem_comp(this, &Other, sizeof(*this)) == 0;
 }
 
-bool CUuid::operator!=(const CUuid& Other)
+bool CUuid::operator!=(const CUuid& Other) const
 {
 	return !(*this == Other);
 }

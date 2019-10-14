@@ -359,6 +359,10 @@ void CFileScore::LoadTeam(const char* Code, int ClientID)
 	GameServer()->SendChatTarget(ClientID, aBuf);
 }
 
+void CFileScore::Process()
+{
+}
+
 void CFileScore::OnShutdown()
 {
 	;

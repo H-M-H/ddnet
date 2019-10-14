@@ -31,6 +31,10 @@
 	#include "sql_server.h"
 #endif
 
+#ifdef CONF_RPC
+	#include <engine/server/rpc/database_client.h>
+#endif
+
 class CSnapIDPool
 {
 	enum
@@ -166,6 +170,7 @@ public:
 		int m_Authed;
 		int m_AuthKey;
 		int m_AuthTries;
+		int m_JoinTick;
 		int m_NextMapChunk;
 		int m_Flags;
 		bool m_ShowIps;
@@ -229,6 +234,10 @@ public:
 
 	array<CNameBan> m_aNameBans;
 
+#ifdef CONF_RPC
+	CDatabaseClient* m_pRPCClient;
+#endif
+
 	CServer();
 
 	int TrySetClientName(int ClientID, const char *pName);
@@ -236,6 +245,7 @@ public:
 	virtual void SetClientName(int ClientID, const char *pName);
 	virtual void SetClientClan(int ClientID, char const *pClan);
 	virtual void SetClientCountry(int ClientID, int Country);
+	virtual int ClientJoinTick(int ClientID) const;
 	virtual void SetClientScore(int ClientID, int Score);
 	virtual void SetClientFlags(int ClientID, int Flags);
 
@@ -336,6 +346,10 @@ public:
 	static void ConDumpSqlServers(IConsole::IResult *pResult, void *pUserData);
 
 	static void CreateTablesThread(void *pData);
+#endif
+
+#ifdef CONF_RPC
+	virtual CDatabaseClient* RPC() { return m_pRPCClient; }
 #endif
 
 	static void ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);

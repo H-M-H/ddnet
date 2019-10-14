@@ -1,0 +1,53 @@
+#pragma once
+
+#include <atomic>
+#include <exception>
+#include <memory>
+#include <thread>
+#include <string>
+#include <vector>
+
+#include <grpcpp/grpcpp.h>
+
+#include <base/tl/future.h>
+#include <base/tl/queue.h>
+#include "database.grpc.pb.h"
+
+class DatabaseException : public std::exception
+{
+public:
+	DatabaseException(const char* pStr, const grpc::Status);
+	DatabaseException(std::string Str, const grpc::Status);
+	const grpc::Status& Status();
+	const char* what() const noexcept override;
+
+private:
+	std::string m_What;
+	const grpc::Status m_Status;
+};
+
+class CDatabaseClient
+{
+public:
+	CDatabaseClient(const char* pAddr, int NumThreads = 2);
+	~CDatabaseClient();
+
+## for s, ms in Services
+## for m, t in ms
+	CFuture<db::{{t.Out}}> {{m}}(const std::shared_ptr<db::{{t.In}}> Msg);
+## endfor
+## endfor
+
+private:
+	void Run();
+
+	std::atomic_bool m_Run;
+	std::shared_ptr<grpc::Channel> m_Channel;
+	CQueue<std::function<void()>> m_CallQueue;
+
+## for s, ms in Services
+	std::unique_ptr<db::{{s}}::Stub> m_{{s}}Service;
+## endfor
+
+	std::vector<std::thread> m_RPCThreads;
+};

@@ -560,6 +560,16 @@ bool CServer::ClientIngame(int ClientID)
 	return ClientID >= 0 && ClientID < MAX_CLIENTS && m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME;
 }
 
+int CServer::ClientJoinTick(int ClientID) const
+{
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS || m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
+			return -1;
+	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME)
+			return m_aClients[ClientID].m_JoinTick;
+	else
+			return -1;
+}
+
 bool CServer::ClientAuthed(int ClientID)
 {
 	return ClientID >= 0 && ClientID < MAX_CLIENTS && m_aClients[ClientID].m_Authed;
@@ -954,6 +964,7 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 	pThis->m_aClients[ClientID].m_TrafficSince = 0;
 	pThis->m_aClients[ClientID].m_ShowIps = false;
 	pThis->m_aPrevStates[ClientID] = CClient::STATE_EMPTY;
+	pThis->m_aClients[ClientID].m_JoinTick = -1;
 	pThis->m_aClients[ClientID].m_Snapshots.PurgeAll();
 
 	pThis->GameServer()->OnClientEngineDrop(ClientID, pReason);
@@ -1264,6 +1275,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				str_format(aBuf, sizeof(aBuf), "player has entered the game. ClientID=%d addr=<{%s}>", ClientID, aAddrStr);
 				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 				m_aClients[ClientID].m_State = CClient::STATE_INGAME;
+				m_aClients[ClientID].m_JoinTick = Tick();
 				GameServer()->OnClientEnter(ClientID);
 			}
 		}
@@ -1884,6 +1896,11 @@ int CServer::Run()
 		dbg_msg("server", "couldn't open socket. port %d might already be in use", g_Config.m_SvPort);
 		return -1;
 	}
+
+#ifdef CONF_RPC
+	CDatabaseClient RPCClient(g_Config.m_SvRPCAddress);
+	m_pRPCClient = &RPCClient;
+#endif
 
 	m_NetServer.SetCallbacks(NewClientCallback, NewClientNoAuthCallback, ClientRejoinCallback, DelClientCallback, this);
 

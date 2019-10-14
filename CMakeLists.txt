@@ -83,6 +83,7 @@ option(CLIENT "Compile client" ON)
 option(DOWNLOAD_GTEST "Download and compile GTest" ${AUTO_DEPENDENCIES_DEFAULT})
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
 option(DEV "Don't generate stuff necessary for packaging" OFF)
+option(RPC "RPC" ON)
 
 set(OpenGL_GL_PREFERENCE LEGACY)
 
@@ -587,6 +588,57 @@ generate_source("src/game/generated/server_data.h" "server_content_header")
 
 
 ########################################################################
+# RPCCODE GENERATION
+########################################################################
+
+if(RPC)
+
+find_package(Protobuf)
+find_package(gRPC)
+
+show_dependency_status("protobuf" PROTOBUF)
+show_dependency_status("gRPC" GRPC)
+
+add_executable(protoc-gen-inja "src/tools/rpc/rpc_inja.cpp")
+target_link_libraries(protoc-gen-inja protobuf::libprotobuf protobuf::libprotoc)
+target_include_directories(protoc-gen-inja PRIVATE "src/tools/rpc/include")
+
+set(_RPC_PATH "${CMAKE_CURRENT_LIST_DIR}/src/engine/server/rpc")
+
+add_custom_command(OUTPUT "${_RPC_PATH}/database_client.cpp" "${_RPC_PATH}/database_client.h"
+  COMMAND "${Protobuf_PROTOC_EXECUTABLE}" -I"${_RPC_PATH}" "${_RPC_PATH}/database.proto"
+            --inja_out="${_RPC_PATH}"
+            --inja_opt="Template=${_RPC_PATH}/database_client.h.inja,Out=database_client.h"
+            --plugin=./protoc-gen-inja
+  COMMAND protoc -I"${_RPC_PATH}" "${_RPC_PATH}/database.proto"
+            --inja_out="${_RPC_PATH}"
+            --inja_opt="Template=${_RPC_PATH}/database_client.cpp.inja,Out=database_client.cpp"
+            --plugin=./protoc-gen-inja
+    DEPENDS protoc-gen-inja "${_RPC_PATH}/database.proto" "${_RPC_PATH}/database_client.cpp.inja" "${_RPC_PATH}/database_client.h.inja"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+)
+
+set(PROTOC_OUT "${_RPC_PATH}/database.pb.h" "${_RPC_PATH}/database.pb.cc")
+
+add_custom_command(OUTPUT ${PROTOC_OUT}
+  COMMAND "${Protobuf_PROTOC_EXECUTABLE}" -I"${_RPC_PATH}" "${_RPC_PATH}/database.proto"
+          --cpp_out="${_RPC_PATH}"
+    DEPENDS "${_RPC_PATH}/database.proto"
+)
+
+grpc_generate_cpp(GRPC_SRCS GRPC_HDRS "${_RPC_PATH}" "${_RPC_PATH}/database.proto")
+
+set(ENGINE_SERVER_RPC
+  "${_RPC_PATH}/database_client.h"
+  "${_RPC_PATH}/database_client.cpp"
+  ${PROTOC_OUT}
+  ${GRPC_SRCS} ${GRPC_HDRS}
+)
+
+endif()
+
+
+########################################################################
 # SHARED
 ########################################################################
 
@@ -607,6 +659,8 @@ set_glob(BASE GLOB_RECURSE src/base
   tl/allocator.h
   tl/array.h
   tl/base.h
+  tl/future.h
+  tl/queue.h
   tl/range.h
   tl/sorted_array.h
   tl/string.h
@@ -1067,6 +1121,8 @@ set_glob(GAME_SERVER GLOB_RECURSE src/game/server
   score.h
   score/file_score.cpp
   score/file_score.h
+  score/rpc_score.cpp
+  score/rpc_score.h
   score/sql_score.cpp
   score/sql_score.h
   teams.cpp
@@ -1078,7 +1134,7 @@ set(GAME_GENERATED_SERVER
   "src/game/generated/server_data.cpp"
   "src/game/generated/server_data.h"
 )
-set(SERVER_SRC ${ENGINE_SERVER} ${GAME_SERVER} ${GAME_GENERATED_SERVER})
+set(SERVER_SRC ${ENGINE_SERVER} ${GAME_SERVER} ${GAME_GENERATED_SERVER} ${ENGINE_SERVER_RPC})
 if(TARGET_OS STREQUAL "windows")
   set(SERVER_ICON "other/icons/DDNet-Server.rc")
 else()
@@ -1106,6 +1162,13 @@ add_executable(${TARGET_SERVER}
 target_link_libraries(${TARGET_SERVER} ${LIBS_SERVER})
 list(APPEND TARGETS_OWN ${TARGET_SERVER})
 list(APPEND TARGETS_LINK ${TARGET_SERVER})
+
+if(RPC)
+  target_compile_definitions(${TARGET_SERVER} PRIVATE CONF_RPC)
+  target_compile_definitions(engine-shared PRIVATE CONF_RPC)
+  target_link_libraries(${TARGET_SERVER} gRPC::grpc++_reflection protobuf::libprotobuf)
+  set_property(TARGET ${TARGET_SERVER} PROPERTY CXX_STANDARD 14)
+endif()
 
 if(TARGET_OS AND TARGET_OS STREQUAL "mac")
   set(SERVER_LAUNCHER_SRC src/osxlaunch/server.mm)

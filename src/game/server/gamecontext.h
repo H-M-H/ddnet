@@ -195,6 +195,7 @@ public:
 
 	// network
 	void CallVote(int ClientID, const char *aDesc, const char *aCmd, const char *pReason, const char *aChatmsg);
+	void StartMapVote(const char* pMapName, const char* pServerType, int ClientID);
 	void SendChatTarget(int To, const char *pText);
 	void SendChatTeam(int Team, const char *pText);
 	void SendChat(int ClientID, int Team, const char *pText, int SpamProtectionClientID = -1);

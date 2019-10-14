@@ -4,6 +4,10 @@
 #include "./entities/character.h"
 #include <game/server/gamecontroller.h>
 
+#ifdef CONF_RPC
+#include <engine/server/rpc/database.pb.h>
+#endif
+
 class CSaveTee
 {
 public:
@@ -13,6 +17,10 @@ public:
 	void load(CCharacter* pchr, int Team);
 	char* GetString();
 	int LoadString(char* String);
+#ifdef CONF_RPC
+	int LoadProtobuf(const db::TeeSave& Save);
+	void FillProtobuf(db::TeeSave& Save);
+#endif
 	vec2 GetPos() { return m_Pos; }
 	char* GetName() { return m_name; }
 
@@ -96,9 +104,13 @@ public:
 	char* GetString();
 	int GetMembersCount() { return m_MembersCount; }
 	int LoadString(const char* String);
+#ifdef CONF_RPC
+	int LoadProtobuf(const db::TeamSave& Save);
+	void FillProtobuf(db::TeamSave& Save);
+#endif
 	int save(int Team);
 	int load(int Team);
-	CSaveTee* SavedTees;
+	CSaveTee* m_pSavedTees;
 
 private:
 	int MatchPlayer(char name[16]);

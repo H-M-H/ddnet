@@ -1,0 +1,211 @@
+syntax = "proto3";
+
+package db;
+
+import "google/protobuf/timestamp.proto";
+
+service Database {
+	rpc BestTime(MapName) returns (RaceTime);
+	rpc CheckBirthDay(PlayerName) returns (BirthdayYears);
+	rpc GetPlayerScore(PlayerAndMap) returns (PlayerScore);
+	rpc FindMap(MapName) returns (MapAndServer);
+	rpc MapInfo(MapName) returns (Message);
+	rpc OnFinish(Finish) returns (Chat);
+	rpc ShowRank(PlayerAndMap) returns (Message);
+	rpc ShowTeamRank(PlayerAndMap) returns (Message);
+	rpc ShowTop(TopRankRequest) returns (Message);
+	rpc ShowTopTeam(TopRankRequest) returns (Message);
+	rpc ShowTimes(PlayerAndMap) returns (Message);
+	rpc ShowPoints(PlayerName) returns (Message);
+	rpc ShowTopPoints(TopPointsRequest) returns (Message);
+	rpc GetRandomMap(RandomMapRequest) returns (MapName);
+	rpc GetRandomUnfinishedMap(RandomUnfinishedMapRequest) returns (MapName);
+	rpc SaveTeam(TeamSave) returns (Message);
+	rpc LoadTeam(TeamLoadRequest) returns (TeamSave);
+}
+
+message Message {
+	string text = 1;
+}
+
+message Chat {
+	string chat_all = 1;
+	map<int32, string> chat_id = 2;
+}
+
+message PlayerName {
+	string name = 1;
+}
+
+message RaceTime {
+	float time = 1;
+}
+
+message Rank {
+	float time = 1;
+	int32 rank = 2;
+}
+
+message TeamRank {
+	float time = 1;
+	int32 rank = 2;
+	repeated string player_name = 3;
+}
+
+message TopRankRequest {
+	string map_name = 1;
+	int32 num_ranks = 2;
+	int32 offset = 3;
+}
+
+message TopPointsRequest {
+	int32 num_ranks = 1;
+	int32 offset = 2;
+}
+
+message RandomMapRequest {
+	string current_map = 1;
+	string server_type = 2;
+	int32 stars = 3;
+}
+
+message RandomUnfinishedMapRequest {
+	string current_map = 1;
+	string server_type = 2;
+	int32 stars = 3;
+	string player_name = 4;
+}
+
+message BirthdayYears {
+	uint32 years_ago = 1;
+}
+
+message PlayerScore {
+	float time = 1;
+	repeated float check_point = 2;
+}
+
+message PlayerAndMap {
+	string player_name = 1;
+	string map_name = 2;
+}
+
+message MapName {
+	string name = 1;
+}
+
+message MapAndServer {
+	string map_name = 1;
+	string server_type = 2;
+}
+
+message TeeFinish {
+	string player_name = 1;
+	repeated float check_point = 2;
+}
+
+message Finish {
+	repeated TeeFinish tee_finished = 1;
+	string map_name = 2;
+	google.protobuf.Timestamp time_stamp = 3;
+	float time = 4;
+	bool team = 5;
+	bytes game_uuid = 6;
+}
+
+message Vec2 {
+	float x = 1;
+	float y = 2;
+}
+
+message WeaponStat {
+	int64 ammo_regen_start = 1;
+	int64 ammo = 2;
+	int64 ammo_cost = 3;
+	int64 got = 4;
+}
+// i = "spnn:let s=s+1:let @s=s
+message TeeSave {
+	string name = 1;
+
+	int64 alive = 2;
+	int64 paused = 3;
+	int64 needed_faketuning = 4;
+
+	int64 tee_finished = 5;
+	int64 is_solo = 6;
+
+	repeated WeaponStat weapon_stat = 7;
+
+	int64 last_weapon = 8;
+	int64 queued_weapon = 9;
+
+	int64 super_jump = 10;
+	int64 jetpack = 11;
+	int64 ninja_jetpack = 12;
+	int64 freeze_time = 13;
+	int64 freeze_tick = 14;
+	int64 deep_freeze = 15;
+	int64 endless_hook = 16;
+	int64 ddrace_state = 17;
+
+	int64 hit = 18;
+	int64 collision = 19;
+	int64 tune_zone = 20;
+	int64 tune_zone_old = 21;
+	int64 hook = 22;
+	int64 time = 23;
+	Vec2 pos = 24;
+	Vec2 prev_pos = 25;
+	int64 tele_checkpoint = 26;
+	int64 last_penalty = 27;
+
+	int64 cp_time = 28;
+	int64 cp_active = 29;
+	int64 cp_last_broadcast = 30;
+	repeated float cp_current = 31;
+
+	int64 not_eligible_for_finish = 32;
+
+	int64 has_tele_gun = 33;
+	int64 has_tele_grenade = 34;
+	int64 has_tele_laser = 35;
+
+	Vec2 core_pos = 36;
+	Vec2 vel = 37;
+	int64 active_weapon = 38;
+	int64 jumped = 39;
+	int64 jumped_total = 40;
+	int64 jumps = 41;
+	Vec2 hook_pos = 42;
+	Vec2 hook_dir = 43;
+	Vec2 hook_telebase = 44;
+	int64 hook_tick = 45;
+	int64 hook_state = 46;
+
+	string game_uuid = 47;
+}
+
+message Switch
+{
+	int32 status = 1;
+	int64 end_time = 2;
+	int32 type = 3;
+}
+
+message TeamSave {
+	string map_name = 1;
+	string code = 2;
+
+	repeated TeeSave tee = 3;
+
+	int32 team_state = 4;
+	int32 team_locked = 5;
+
+	repeated Switch switch = 6;
+}
+
+message TeamLoadRequest {
+	string map_name = 1;
+	string code = 2;
+}
